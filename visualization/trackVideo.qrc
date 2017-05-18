@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/">
+        <file>image/open.png</file>
+        <file>image/pause.png</file>
+        <file>image/play.png</file>
+        <file>image/save.png</file>
+        <file>image/seek-backward.png</file>
+        <file>image/seek-forward.png</file>
+        <file>image/stop.png</file>
+        <file>image/edit.png</file>
+        <file>image/minus.png</file>
+        <file>image/plus.png</file>
+        <file>image/process.png</file>
+        <file>image/scrollbar.png</file>
+        <file>image/busy.png</file>
+        <file>qml/LayerTab.qml</file>
+        <file>qml/Layer.qml</file>
+        <file>qml/Main.qml</file>
+        <file>qml/Protocol.qml</file>
+        <file>qml/ScrollBar.qml</file>
+    </qresource>
+</RCC>
