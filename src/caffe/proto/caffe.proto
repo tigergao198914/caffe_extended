@@ -405,6 +405,7 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  optional ExtendedConvolutionParameter extended_convolution_param = 200;
 }
 
 // Message that stores parameters used to apply transformation
@@ -618,6 +619,35 @@ message ConvolutionParameter {
   // implementation; for input blobs with num_axes != 2, this option is
   // ignored and the ND implementation will be used.)
   optional bool force_nd_im2col = 17 [default = false];
+}
+
+message ExtendedConvolutionParameter {
+  optional bool bias_term = 2 [default = true];
+  repeated uint32 pad = 3; // The padding size; defaults to 0
+  repeated uint32 kernel_size = 4; // The kernel size
+  repeated uint32 stride = 6; // The stride; defaults to 1
+  // Factor used to dilate the kernel, (implicitly) zero-filling the resulting
+  // holes. (Kernel dilation is sometimes referred to by its use in the
+  // algorithme à trous from Holschneider et al. 1987.)
+  repeated uint32 dilation = 18; // The dilation; defaults to 1
+
+  repeated uint32 weight_dim = 19;
+  repeated uint32 feature_pad = 20; //default to 0
+  repeated uint32 feature_stride = 21;
+  repeated uint32 feature_dilation = 22;
+  
+  optional uint32 group = 23 [default = 1]; // The group size for group conv
+
+  optional FillerParameter weight_filler = 24; // The filler for the weight
+  //optional FillerParameter bias_filler = 25; // The filler for the bias
+
+  enum Engine {
+    DEFAULT = 0;
+    CAFFE = 1;
+    CUDNN = 2;
+  }
+  optional Engine engine = 25 [default = DEFAULT];
+  optional int32 axis = 26 [default = 1];
 }
 
 message CropParameter {

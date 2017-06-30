@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "caffe/common.hpp"
 #include "caffe/proto/caffe.pb.h"
@@ -74,6 +75,51 @@ class Blob {
   inline int num_axes() const { return shape_.size(); }
   inline int count() const { return count_; }
 
+  void display() const
+  {
+    const Dtype * data = cpu_data();
+    if( num_axes()==2 )
+    {
+      for(int i=0; i<shape(0); i++)
+      {
+        for( int j=0; j<shape(1); j++)
+        {
+          std::cout<<" "<<data[i*shape(1)+j];
+        }
+        std::cout<<std::endl;
+      }
+    }
+    else if( num_axes()==3 )
+    {
+      for( int j=0; j<shape(1); j++)
+      {
+        for( int i=0; i<shape(0); i++ )
+        {
+          for( int k=0; k<shape(2); k++ )
+          {
+            std::cout<<" "<<data[i*shape(1)*shape(2)+j*shape(2)+k];
+          }
+          std::cout<<"     ";
+        }
+        std::cout<<std::endl;
+      }
+    }
+    else if( num_axes()==4 )
+    {
+      for( int j=0; j<shape(2); j++)
+      {
+        for( int i=0; i<shape(1); i++ )
+        {
+          for( int k=0; k<shape(3); k++ )
+          {
+            std::cout<<" "<<data[i*shape(2)*shape(3)+j*shape(3)+k];
+          }
+          std::cout<<"     ";
+        }
+        std::cout<<std::endl;
+      }
+    }
+  }
   /**
    * @brief Compute the volume of a slice; i.e., the product of dimensions
    *        among a range of axes.

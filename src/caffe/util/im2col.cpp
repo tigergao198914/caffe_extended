@@ -231,4 +231,175 @@ template void col2im_nd_cpu<double>(const double* data_col,
     const int* dilation, double* data_im);
 
 
+void get_offset( const int* shape, const int num_axes, const int idx, vector<int>& offset )
+{
+    int tmp_idx = idx;
+    offset.resize(num_axes);
+    for( int dim=num_axes-1; dim>=0; dim-- )
+    {
+        int tmp_offset = tmp_idx % shape[dim];
+        offset[dim] = tmp_offset;
+        tmp_idx /= shape[dim];
+    }
+}
+
+int get_idx( const int *shape, const int num_axes, vector<int>& offset)
+{
+    int idx = 0;
+    int base = 1;
+    int max_idx = 1;
+    for( int i=0; i<num_axes; i++ )
+    {
+      max_idx *= shape[i];
+    }
+    for( int dim=num_axes-1; dim>=0; dim-- )
+    {
+        if( offset[dim]<0 )
+        {
+            return -1;
+        }
+        idx += offset[dim]*base;
+        base *= shape[dim];
+    }
+    if( idx>= max_idx )
+    {
+      return -1;
+    }
+    return idx;
+}
+
+template <typename Dtype>
+Dtype get_data( const Dtype* data, const int *shape, const int num_axes, vector<int>& offset)
+{
+    int idx = get_idx( shape, num_axes, offset);
+    if( idx==-1 )
+    {
+      return 0;
+    } 
+    else
+    {
+      return data[idx];
+    }
+}
+
+template <typename Dtype>
+void data2col_cpu(const Dtype* data, const int num_spatial_axes,
+    const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    Dtype* data_col) {
+    
+    int kernel_size = 1;
+    for( int i=0; i<num_spatial_axes; i++ )
+    {
+        kernel_size *= kernel_shape[i];
+    }
+
+    int col_num = 1;
+    for( int i=0; i<num_spatial_axes; i++ )
+    {
+       int tmp_dim = (im_shape[i] + 2*pad[i] - kernel_shape[i])/stride[i] + 1;
+       col_num *= tmp_dim;
+    }
+
+    for( int kel_idx=0; kel_idx<kernel_size; kel_idx++ )
+    {
+        vector<int> kel_offset;
+        get_offset( kernel_shape, num_spatial_axes, kel_idx, kel_offset );
+
+        for( int col_idx=0; col_idx<col_num; col_idx++ )
+        {
+            vector<int> col_offset;
+            vector<int> data_offset;
+            get_offset( col_shape+1, num_spatial_axes, col_idx, col_offset );
+            for( int dim=0; dim<num_spatial_axes; dim++ )
+            {
+                data_offset.push_back(col_offset[dim]*stride[dim]);
+                data_offset[dim] -= pad[dim];
+                data_offset[dim] += kel_offset[dim];
+            }
+            
+            Dtype d = get_data( data, im_shape, num_spatial_axes, data_offset);
+            col_offset.insert(col_offset.begin(), kel_idx);
+            int idx =  get_idx( col_shape, num_spatial_axes+1, col_offset );
+            data_col[idx] = d;
+        }
+    }
+}
+
+template void data2col_cpu<float>(const float* data, const int num_spatial_axes,
+    const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    float* data_col);
+
+template void data2col_cpu<double>(const double* data, const int num_spatial_axes,
+    const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    double* data_col);
+
+template <typename Dtype>
+void col2data_cpu( Dtype* data, const int num_spatial_axes,
+    const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    const Dtype* data_col)
+{
+    int kernel_size = 1;
+    int image_size = 1;
+    for( int i=0; i<num_spatial_axes; i++ )
+    {
+        kernel_size *= kernel_shape[i];
+        image_size *= im_shape[i];
+    }
+
+    int col_num = 1;
+    for( int i=0; i<num_spatial_axes; i++ )
+    {
+       int tmp_dim = (im_shape[i] + 2*pad[i] - kernel_shape[i])/stride[i] + 1;
+       col_num *= tmp_dim;
+    }
+
+    for( int i=0; i<image_size; i++)
+    {
+      data[i] = 0;
+    }
+
+    for( int kel_idx=0; kel_idx<kernel_size; kel_idx++ )
+    {
+        vector<int> kel_offset;
+        get_offset( kernel_shape, num_spatial_axes, kel_idx, kel_offset );
+
+        for( int col_idx=0; col_idx<col_num; col_idx++ )
+        {
+            vector<int> col_offset;
+            vector<int> data_offset;
+            get_offset( col_shape+1, num_spatial_axes, col_idx, col_offset );
+            for( int dim=0; dim<num_spatial_axes; dim++ )
+            {
+                data_offset.push_back(col_offset[dim]*stride[dim]);
+                data_offset[dim] -= pad[dim];
+                data_offset[dim] += kel_offset[dim];
+            }
+
+            col_offset.insert(col_offset.begin(), kel_idx);
+            Dtype d = get_data( data_col, col_shape, num_spatial_axes+1, col_offset );
+            int idx =  get_idx( im_shape, num_spatial_axes, data_offset );
+            data[idx] += d;
+            #if 0
+            Dtype d = get_data( data, im_shape, num_spatial_axes, data_offset);
+            col_offset.insert(col_offset.begin(), kel_idx);
+            int idx =  get_idx( col_shape, num_spatial_axes+1, col_offset );
+            data_col[idx] = d;
+            #endif
+        }
+    }
+}
+template void col2data_cpu<float>( float* data, const int num_spatial_axes,
+    const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    const float* data_col);
+
+template void col2data_cpu<double>( double* data, const int num_spatial_axes,
+    const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    const double* data_col);
+
 }  // namespace caffe
