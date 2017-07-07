@@ -509,4 +509,164 @@ template void col2im_nd_gpu<double>(const double* data_col,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, double* data_im);
 
+
+template <typename Dtype>
+__global__ void data2col_nd_gpu_kernel(
+    const int n,
+    Dtype* data_im,
+    int num_axes,
+    const int* im_shape, 
+    const int* col_shape,
+    const int* kernel_shape,
+    const int* pad, 
+    const int* stride,
+    Dtype* data_col,
+    bool data2col) {
+
+  int col_offset[10];  // NOLINT(runtime/arrays)
+  int data_offset[10];  // CAFFE_CUDA_NUM_THREADSNOLINT(runtime/arrays)
+  int img_offset[10];
+  int data_shape[10];
+
+  __shared__ int shared_kernel_shape[10];
+  __shared__ int shared_pad[10];
+  __shared__ int shared_stride[10];
+  __shared__ int shared_im_shape[10];
+  __shared__ int shared_col_shape[10 + 1];
+  
+
+  if (threadIdx.x < num_axes) {
+    shared_kernel_shape[threadIdx.x] = kernel_shape[threadIdx.x];
+    shared_pad[threadIdx.x] = pad[threadIdx.x];
+    shared_stride[threadIdx.x] = stride[threadIdx.x];
+    shared_im_shape[threadIdx.x] = im_shape[threadIdx.x];
+  }
+  if (threadIdx.x < num_axes + 1) {
+    shared_col_shape[threadIdx.x] = col_shape[threadIdx.x];
+  }
+  __syncthreads();
+
+  int i,j;
+  CUDA_KERNEL_LOOP(index, n) {
+    int tmp_col_index = index;
+    int tmp_data_index = index;
+    int col_index = 0;
+    int col_base = 1;
+    int kernel_size = 1;
+    bool outofrange = false;
+
+    for( i=num_axes-1; i>=0; i-- )
+    {
+      data_shape[i]  = (shared_im_shape[i]+2*shared_pad[i]-shared_kernel_shape[i])/shared_stride[i] + 1;
+      col_offset[i]  = tmp_col_index%shared_col_shape[i+1];
+      data_offset[i] = tmp_data_index%data_shape[i];
+      img_offset[i]  = data_offset[i]*shared_stride[i] - shared_pad[i];
+      tmp_col_index /= shared_col_shape[i+1];
+      tmp_data_index /= data_shape[i];
+      kernel_size *= shared_kernel_shape[i];
+
+      col_index += col_offset[i]*col_base;
+      col_base *= shared_col_shape[i+1];
+    }
+
+    for( i=0; i<kernel_size; i++ )
+    {
+        int img_index = 0;
+        int img_base = 1;
+        int tmp_kernel_index = i;
+        outofrange = false;
+        for( j=num_axes-1; j>=0; j--)
+        {
+          int kernel_offset = tmp_kernel_index%shared_kernel_shape[j+1];
+          tmp_kernel_index /= shared_kernel_shape[j+1];
+          col_offset[j] = img_offset[j]+kernel_offset;
+          if( col_offset[j]<0 || col_offset[j]>=shared_im_shape[j] )
+          {
+            outofrange = true;
+            break;
+          }
+
+          img_index += col_offset[j]*img_base;
+          img_base *= shared_im_shape[j];
+        }
+        if(outofrange)
+        {
+          if( data2col )
+          {
+            data_col[col_index] = 0;
+          }
+          else
+          {
+            data_im[img_index] += 0;
+          }
+          
+        }
+        else
+        {
+          if( data2col )
+          {
+            data_col[col_index] = data_im[img_index];
+          }
+          else
+          {
+            data_im[img_index] += data_col[col_index];
+          }
+        }
+
+        col_index += n;
+    }
+  }  // CUDA_KERNEL_LOOP(index, n)
+}
+
+template <typename Dtype>
+void data2col_gpu( Dtype* data_col, const int num_spatial_axes,
+    const int num_kernels, const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    Dtype* data_im) {
+    // num_axes should be smaller than block size
+    DCHECK_LT(num_spatial_axes, CAFFE_CUDA_NUM_THREADS);
+    data2col_nd_gpu_kernel<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
+        <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+        num_kernels, data_im, num_spatial_axes, im_shape, col_shape,
+        kernel_shape, pad, stride, data_col, true);
+  
+    CUDA_POST_KERNEL_CHECK;
+}
+
+template void data2col_gpu<float>( float* data_col, const int num_spatial_axes,
+    const int num_kernels, const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    float* data_im);
+
+template void data2col_gpu<double>( double* data_col, const int num_spatial_axes,
+    const int num_kernels, const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    double* data_im);
+
+
+template <typename Dtype>
+void col2data_gpu( Dtype* data_col, const int num_spatial_axes,
+    const int num_kernels, const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    Dtype* data_im) {
+    // num_axes should be smaller than block size
+    DCHECK_LT(num_spatial_axes, CAFFE_CUDA_NUM_THREADS);
+    data2col_nd_gpu_kernel<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
+        <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
+        num_kernels, data_im, num_spatial_axes, im_shape, col_shape,
+        kernel_shape, pad, stride, data_col, false);
+  
+    CUDA_POST_KERNEL_CHECK;
+}
+
+template void col2data_gpu<float>( float* data_col, const int num_spatial_axes,
+    const int num_kernels, const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+   float* data_im);
+
+template void col2data_gpu<double>( double* data_col, const int num_spatial_axes,
+    const int num_kernels, const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    double* data_im);
+
 }  // namespace caffe

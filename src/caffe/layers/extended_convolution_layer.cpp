@@ -162,21 +162,13 @@ namespace caffe {
         }
         feature_cols_.Reshape(feature_cols_shape_vector_);
 
+
         this->blobs_.resize(1);
         //initalize and fill the weight
         this->blobs_[0].reset( new Blob<Dtype>(weight_shape_vector_) );
-        shared_ptr<Filler<Dtype> > weight_filter( GetFiller<Dtype>(conv_param.weight_filler()) );
+        shared_ptr<Filler<Dtype> > weight_filter( GetFiller<Dtype>(
+            this->layer_param_.extended_convolution_param().weight_filler()) );
         weight_filter->Fill( this->blobs_[0].get() );
-
-#if 0
-        for( int i = 0; i<this->blobs_[0]->count() ; i++)
-        {
-            this->blobs_[0]->mutable_cpu_data()[i] = i;
-        }
-#endif
-        gen_kernel_cpu();
-        //weight_offset_ = conv_out_channels_ * kernel_dim_ / group_;
-        // Propagate gradients to the parameters (as directed by backward pass).
         this->param_propagate_down_.resize(this->blobs_.size(), true);
     }
 
@@ -251,7 +243,7 @@ namespace caffe {
         Dtype* weight_diff = feature_cols_.mutable_cpu_diff();
         
         for (int i = 0; i < top.size(); ++i) {
-            Dtype* top_diff = top[i]->mutable_cpu_diff();
+            const Dtype* top_diff = top[i]->cpu_diff();
             const Dtype* bottom_data = bottom[i]->cpu_data();
             Dtype* bottom_diff = bottom[i]->mutable_cpu_diff();
         
@@ -263,7 +255,7 @@ namespace caffe {
                         weight_diff, top_diff + n * top_sample_dim_);
                     }
                     // gradient w.r.t. bottom data, if necessary.
-                    if (propagate_down[i]) {
+                    if (false) {//propagate_down[i]
                         this->backward_cpu_gemm(top_diff + n * top_sample_dim_, weight,
                             bottom_diff + n * bottom_sample_dim_);
                     }
@@ -274,23 +266,9 @@ namespace caffe {
         compute_diff_from_kernel_cpu();
     }
 
-   template <typename Dtype>
-   void ExtendedConvolutionLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
-        const vector<Blob<Dtype>*>& top)
-    {
-
-    }
-
-    template <typename Dtype>
-    void ExtendedConvolutionLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
-        const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom)
-    {
-
-    }
-
     #ifdef CPU_ONLY
     STUB_GPU(ExtendedConvolutionLayer);
     #endif
-
+    REGISTER_LAYER_CLASS(ExtendedConvolution);
     INSTANTIATE_CLASS(ExtendedConvolutionLayer);
 }

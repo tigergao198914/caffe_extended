@@ -406,6 +406,7 @@ message LayerParameter {
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
   optional ExtendedConvolutionParameter extended_convolution_param = 200;
+  optional ExtendedPoolingParameter extended_pooling_param  = 201;
 }
 
 // Message that stores parameters used to apply transformation
@@ -951,6 +952,22 @@ message PoolingParameter {
   // If global_pooling then it will pool over the size of the bottom by doing
   // kernel_h = bottom->height and kernel_w = bottom->width
   optional bool global_pooling = 12 [default = false];
+}
+
+message ExtendedPoolingParameter {
+  enum PoolMethod{
+    MAX = 0;
+  }
+  optional PoolMethod pool = 1 [default = MAX];
+  repeated uint32 pad = 2; // The padding size (equal in Y, X)
+  repeated uint32 kernel_size = 3; // The kernel size (square)
+  repeated uint32 stride = 4; // The stride (equal in Y, X)
+  enum Engine {
+    DEFAULT = 0;
+    CAFFE = 1;
+    CUDNN = 2;
+  }
+  optional Engine engine = 11 [default = DEFAULT];
 }
 
 message PowerParameter {

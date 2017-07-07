@@ -67,6 +67,18 @@ void col2data_cpu( Dtype* data, const int num_spatial_axes,
     const int* kernel_shape, const int* pad, const int* stride,
     const Dtype* data_col);
 
+template <typename Dtype>
+void data2col_gpu( Dtype* data_col, const int num_spatial_axes,
+    const int num_kernels, const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    Dtype* data_im);
+
+template <typename Dtype>
+void col2data_gpu( Dtype* data_col, const int num_spatial_axes,
+    const int num_kernels, const int* im_shape, const int* col_shape,
+    const int* kernel_shape, const int* pad, const int* stride,
+    Dtype* data_im);
+
 }  // namespace caffe
 
 #endif  // CAFFE_UTIL_IM2COL_HPP_

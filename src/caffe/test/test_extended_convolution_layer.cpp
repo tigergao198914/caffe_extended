@@ -347,10 +347,12 @@ class ExtendedConvolutionLayerTest : public MultiDeviceTest<TypeParam> {
     filler.Fill(this->blob_bottom_2_);
     blob_bottom_vec_.push_back(blob_bottom_);
     blob_top_vec_.push_back(blob_top_);
+    #if 0
     for( int i = 0; i<blob_bottom_->count() ; i++)
     {
        blob_bottom_->mutable_cpu_data()[i] =1;
     }
+    #endif
     
   }
 
@@ -489,7 +491,7 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestSetup) {
   EXPECT_EQ( top_shape[5], 1 );
 }
 
-TYPED_TEST(ExtendedConvolutionLayerTest, TestForward_cpu) {
+TYPED_TEST(ExtendedConvolutionLayerTest, TestForward) {
     typedef typename TypeParam::Dtype Dtype;
     LayerParameter layer_param;
     ExtendedConvolutionParameter* convolution_param =
@@ -528,7 +530,7 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestForward_cpu) {
 
 }
 
-TYPED_TEST(ExtendedConvolutionLayerTest, TestBackword_cpu) {
+TYPED_TEST(ExtendedConvolutionLayerTest, TestBackword) {
     typedef typename TypeParam::Dtype Dtype;
     LayerParameter layer_param;
     ExtendedConvolutionParameter* convolution_param =
