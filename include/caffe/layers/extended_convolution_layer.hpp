@@ -17,7 +17,7 @@ public:
     explicit ExtendedConvolutionLayer(const LayerParameter& param)
         : Layer<Dtype>(param){}
     
-    virtual inline const char* type() const {return "ExtenedConvolution";}
+    virtual inline const char* type() const {return "ExtendedConvolution";}
     Blob<Dtype> * getFeatureCol(){ return &feature_cols_; };
     Blob<Dtype> * getWeight(){
       return  this->blobs_[0].get();
@@ -70,11 +70,22 @@ protected:
     /*generate kernel map from learnable param*/
     void gen_kernel_cpu()
     {
-       Dtype *param = this->blobs_[0]->mutable_cpu_data();
-       data2col_cpu(param, num_spatial_axes_, 
+       Dtype *weight_data = this->blobs_[0]->mutable_cpu_data();
+       data2col_cpu(weight_data, num_spatial_axes_, 
           weight_shape_.cpu_data(),  feature_cols_shape_.cpu_data(),
           kernel_shape_.cpu_data(), feature_pad_.cpu_data(), feature_stride_.cpu_data(),
           feature_cols_.mutable_cpu_data());
+       caffe_set( feature_cols_.count(),Dtype(0),feature_cols_.mutable_cpu_diff() );
+    }
+
+    void gen_kernel_gpu()
+    {
+       Dtype *weight_data = this->blobs_[0]->mutable_gpu_data();
+       data2col_gpu(weight_data, num_spatial_axes_, feature_cols_.count(1),
+          weight_shape_.gpu_data(),  feature_cols_shape_.gpu_data(),
+          kernel_shape_.gpu_data(), feature_pad_.gpu_data(), feature_stride_.gpu_data(),
+          feature_cols_.mutable_gpu_data());
+       caffe_gpu_set( feature_cols_.count(),Dtype(0),feature_cols_.mutable_gpu_diff() );
     }
 
     void gen_data_col_cpu(const Dtype* input, Dtype* output)
@@ -85,13 +96,30 @@ protected:
             output);
     }
 
+    void gen_data_col_gpu(Dtype* input, Dtype* output)
+    {
+        data2col_gpu(input, num_spatial_axes_, data_cols_.count(1),
+            bottom_sample_shape_.gpu_data(), data_col_buffer_shape_.gpu_data(),
+            kernel_shape_.gpu_data(), pad_.gpu_data(), stride_.gpu_data(),
+            output);
+    }
+
     void compute_diff_from_kernel_cpu()
     {
         Dtype *param = this->blobs_[0]->mutable_cpu_diff();
         col2data_cpu(param, num_spatial_axes_,
           weight_shape_.cpu_data(), feature_cols_shape_.cpu_data(),
           kernel_shape_.cpu_data(), feature_pad_.cpu_data(), feature_stride_.cpu_data(),
-          feature_cols_.cpu_diff());
+          feature_cols_.mutable_cpu_diff());
+    }
+
+    void compute_diff_from_kernel_gpu()
+    {
+        Dtype *weight_data = this->blobs_[0]->mutable_gpu_diff();
+        col2data_gpu(weight_data, num_spatial_axes_, feature_cols_.count(1),
+          weight_shape_.gpu_data(), feature_cols_shape_.gpu_data(),
+          kernel_shape_.gpu_data(), feature_pad_.gpu_data(), feature_stride_.gpu_data(),
+          feature_cols_.mutable_gpu_diff());
     }
 
     void compute_diff_from_col_data_cpu(Dtype* col_buff, Dtype *data)
@@ -99,6 +127,14 @@ protected:
         col2data_cpu(data, num_spatial_axes_, 
             bottom_sample_shape_.cpu_data(), data_col_buffer_shape_.cpu_data(),
             kernel_shape_.cpu_data(), pad_.cpu_data(), stride_.cpu_data(),
+            col_buff);
+    }
+
+    void compute_diff_from_col_data_gpu(Dtype* col_buff, Dtype *data)
+    {
+        col2data_gpu(data, num_spatial_axes_, data_cols_.count(1),
+            bottom_sample_shape_.gpu_data(), data_col_buffer_shape_.gpu_data(),
+            kernel_shape_.gpu_data(), pad_.gpu_data(), stride_.gpu_data(),
             col_buff);
     }
 
@@ -111,8 +147,18 @@ protected:
             (Dtype)1., weights , col_buff ,
             (Dtype)0., output );
     }
+        
+    void forward_gpu_gemm( Dtype* input, const Dtype* weights, Dtype* output) {
+        
+        Dtype* col_buff = data_cols_.mutable_gpu_data();
+        gen_data_col_gpu(input, col_buff);
+        caffe_gpu_gemm<Dtype>(CblasTrans, CblasNoTrans, feature_num_,
+            sample_col_num_, kernel_dim_,
+            (Dtype)1., weights , col_buff ,
+            (Dtype)0., output );
+    }
 
-    void weight_cpu_gemm(const Dtype* input, Dtype* weights, Dtype* output)
+    void weight_cpu_gemm(const Dtype* input, Dtype* weights, const Dtype* output)
     {
         Dtype* col_buff = data_cols_.mutable_cpu_data();
         gen_data_col_cpu( input, col_buff);
@@ -120,6 +166,78 @@ protected:
             feature_num_, sample_col_num_, 
             (Dtype)1., col_buff, output, 
             (Dtype)1., weights);
+#if 0
+       std::cout<<std::endl<<"top diff3:"<<std::endl;
+        for( int i=0; i<sample_col_num_*feature_num_ ; i++)
+        {
+            if(i%feature_num_==0)
+            {
+                std::cout<< std::endl;
+            }
+            std::cout<<output[i]<<"  ";
+        }
+
+        std::cout<<"col_buff:"<<std::endl;
+        for( int i=0; i<data_cols_.count(); i++)
+        {
+            if( i%data_cols_.count(1) == 0 )
+            {
+                std::cout<< std::endl;
+            }
+           std::cout<< col_buff[i]<< "  ";
+        }
+
+        std::cout<<"weight diff:"<<std::endl;
+        for( int i=0; i<feature_cols_.count(); i++)
+        {
+            if( i%16 == 0 )
+            {
+                std::cout<< std::endl;
+            }
+            std::cout<< weights[i] << "  ";
+        }
+#endif
+    }
+
+    void weight_gpu_gemm( Dtype* input, Dtype* weights, const Dtype* output)
+    {
+        Dtype* col_buff = data_cols_.mutable_gpu_data();
+        gen_data_col_gpu( input, col_buff);
+        caffe_gpu_gemm<Dtype>(CblasNoTrans, CblasTrans, kernel_dim_,
+            feature_num_, sample_col_num_, 
+            (Dtype)1., col_buff, output, 
+            (Dtype)1., weights);
+#if 0
+       std::cout<<std::endl<<"top diff3:"<<std::endl;
+        for( int i=0; i<sample_col_num_*feature_num_ ; i++)
+        {
+            if(i%feature_num_==0)
+            {
+                std::cout<< std::endl;
+            }
+            std::cout<<output[i]<<"  ";
+        }
+
+        std::cout<<"col_buff:"<<std::endl;
+        for( int i=0; i<data_cols_.count(); i++)
+        {
+            if( i%data_cols_.count(1) == 0 )
+            {
+                std::cout<< std::endl;
+            }
+           std::cout<< col_buff[i]<< "  ";
+        }
+
+        std::cout<<"weight diff:"<<std::endl;
+        for( int i=0; i<feature_cols_.count(); i++)
+        {
+            if( i%16 == 0 )
+            {
+                std::cout<< std::endl;
+            }
+            std::cout<< weights[i] << "  ";
+        }
+#endif
     }
 
     void backward_cpu_gemm(const Dtype* output,const Dtype* weights,Dtype* input) 
@@ -131,6 +249,17 @@ protected:
             (Dtype)0., col_buff);
         compute_diff_from_col_data_cpu(col_buff, input);
     }
+
+    void backward_gpu_gemm(const Dtype* output,const Dtype* weights,Dtype* input) 
+    {
+        Dtype* col_buff = data_cols_.mutable_gpu_data();
+        caffe_gpu_gemm<Dtype>(CblasNoTrans, CblasNoTrans, kernel_dim_,
+            sample_col_num_, feature_num_,
+            (Dtype)1., weights, output ,
+            (Dtype)0., col_buff);
+        compute_diff_from_col_data_gpu(col_buff, input);
+    }
+
 };
 }
 #endif
