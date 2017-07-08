@@ -75,9 +75,18 @@ class Blob {
   inline int num_axes() const { return shape_.size(); }
   inline int count() const { return count_; }
 
-  void display() const
+  void display(bool bdiff=false) const
   {
-    const Dtype * data = cpu_data();
+    const Dtype * data;
+    if( bdiff )
+    {
+      data = cpu_diff();
+    }
+    else
+    {
+      data = cpu_data();
+    }
+    
     if( num_axes()==2 )
     {
       for(int i=0; i<shape(0); i++)

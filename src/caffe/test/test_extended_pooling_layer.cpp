@@ -1,5 +1,5 @@
 #include <vector>
-
+#include <stdlib.h>
 #include "gtest/gtest.h"
 
 #include "caffe/blob.hpp"
@@ -126,12 +126,13 @@ TYPED_TEST(ExtendedPoolingLayerTest, TestBackword) {
     pooling_param->add_stride(1);
     //pooling_param->set_pool(PoolingParameter_PoolMethod_MAX);
     this->blob_bottom_->Reshape(2, 4, 3, 5);
+    ExtendedPoolingLayer<Dtype> layer(layer_param);
+
+    srand(0xf278932);
     for (int i = 0; i < this->blob_bottom_->count(); i++) 
     {
-      this->blob_bottom_->mutable_cpu_data()[i] = i;
+      this->blob_bottom_->mutable_cpu_data()[i] = random()%5000;
     }
-
-    ExtendedPoolingLayer<Dtype> layer(layer_param);
 
     GradientChecker<Dtype> checker(1e-2, 1e-3);
     checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,

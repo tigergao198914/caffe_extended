@@ -509,6 +509,7 @@ template void col2im_nd_gpu<double>(const double* data_col,
     const int* kernel_shape, const int* pad, const int* stride,
     const int* dilation, double* data_im);
 
+#define MAXIMIZE_AXES_NUM 32
 
 template <typename Dtype>
 __global__ void data2col_nd_gpu_kernel(
@@ -522,17 +523,17 @@ __global__ void data2col_nd_gpu_kernel(
     const int* stride,
     Dtype* data_col,
     bool data2col) {
+  
+  int col_offset[MAXIMIZE_AXES_NUM];  // NOLINT(runtime/arrays)
+  int data_offset[MAXIMIZE_AXES_NUM];  // CAFFE_CUDA_NUM_THREADSNOLINT(runtime/arrays)
+  int img_offset[MAXIMIZE_AXES_NUM];
+  int data_shape[MAXIMIZE_AXES_NUM];
 
-  int col_offset[10];  // NOLINT(runtime/arrays)
-  int data_offset[10];  // CAFFE_CUDA_NUM_THREADSNOLINT(runtime/arrays)
-  int img_offset[10];
-  int data_shape[10];
-
-  __shared__ int shared_kernel_shape[10];
-  __shared__ int shared_pad[10];
-  __shared__ int shared_stride[10];
-  __shared__ int shared_im_shape[10];
-  __shared__ int shared_col_shape[10 + 1];
+  __shared__ int shared_kernel_shape[MAXIMIZE_AXES_NUM];
+  __shared__ int shared_pad[MAXIMIZE_AXES_NUM];
+  __shared__ int shared_stride[MAXIMIZE_AXES_NUM];
+  __shared__ int shared_im_shape[MAXIMIZE_AXES_NUM];
+  __shared__ int shared_col_shape[MAXIMIZE_AXES_NUM + 1];
   
 
   if (threadIdx.x < num_axes) {

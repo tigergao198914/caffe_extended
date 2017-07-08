@@ -19,7 +19,7 @@ __global__ void MaxPoolForward(
     Dtype*  top_data) {
     CUDA_KERNEL_LOOP(index, nthreads) {
         int start_offset = input_offset[index];
-        Dtype max = -(~0X0);
+        Dtype max = -0x7fffffff;
         int max_offset  = 0;
         for( int j=0; j<kernel_size; j++ )
         {
@@ -27,12 +27,13 @@ __global__ void MaxPoolForward(
             int offset = index_map[paded_offset];
             if( offset!=-1)
             {
-                max = (max>bottom_data[offset])?max:bottom_data[offset];
                 max_offset = (max>bottom_data[offset])?max_offset:offset;
+                max = (max>bottom_data[offset])?max:bottom_data[offset];
+                
             }
         }
-        top_data[index] = max;
         max_idx_data[index] = max_offset;
+        top_data[index] = max;
   }
 }
 
@@ -41,7 +42,7 @@ __global__ void MaxPoolBackward(const int nthreads,  Dtype*  bottom_data,
     const int* offset_data, const Dtype* top_data) {
   CUDA_KERNEL_LOOP(index, nthreads) {
     int i = offset_data[index];
-    bottom_data[i] = top_data[index];
+    bottom_data[i] += top_data[index];
   }
 }
 
@@ -58,17 +59,20 @@ void ExtendedPoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom
           max_idx_.mutable_gpu_data(),
           top[0]->mutable_gpu_data()
       );
+      
 }
 
 template <typename Dtype>
 void ExtendedPoolingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
+      caffe_gpu_set(bottom[0]->count(), Dtype(0.), bottom[0]->mutable_gpu_diff());
       MaxPoolBackward<Dtype><<<CAFFE_GET_BLOCKS(ouput_ele_size_), CAFFE_CUDA_NUM_THREADS>>>(
           ouput_ele_size_,
           bottom[0]->mutable_gpu_diff(),
           this->max_idx_.gpu_data(),
           top[0]->gpu_diff()
       );
+      //bottom[0]->display(true);
 }
 
 INSTANTIATE_LAYER_GPU_FUNCS(ExtendedPoolingLayer);

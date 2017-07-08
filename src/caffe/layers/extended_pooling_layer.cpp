@@ -83,8 +83,7 @@ namespace caffe {
       const vector<Blob<Dtype>*>& top)
     {
         vector<int> tmp_shape;
-        vector<int> paded_input_size_;
-
+        paded_input_size_.clear();
         tmp_shape.push_back(bottom[0]->shape(0));
         for( int i=0; i<output_size_.size(); i++ )
         {
@@ -172,6 +171,12 @@ namespace caffe {
                 paded_index_map_data[i] = input_offset;
             }
         }
+       // std::cout<< "paded_index_map:" << std::endl;
+       // paded_index_map_.display();
+       // std::cout<< "input_offset:" << std::endl;
+       // input_offset_.display();
+       // std::cout<< "kernel_offset:" << std::endl;
+       // kernel_offset_.display();
     }
 
     template <typename Dtype>
@@ -190,7 +195,7 @@ namespace caffe {
             for( int i=0; i<ouput_ele_size_; i++ )
             {
                 int start_offset = input_offset_data[i];
-                Dtype max = -(~0X0);
+                Dtype max = -0x7fffffff;
                 int max_offset  = 0;
                 for( int j=0; j<kernel_ele_size_; j++ )
                 {
@@ -198,15 +203,22 @@ namespace caffe {
                     int offset = paded_index_map_data[paded_offset];
                     if( offset!=-1)
                     {
-                        max = (max>bottom_data[offset])?max:bottom_data[offset];
                         max_offset = (max>bottom_data[offset])?max_offset:offset;
+                        max = (max>bottom_data[offset])?max:bottom_data[offset];
                     }
                 }
-                top_data[i] = max;
                 max_idx_data[i] = max_offset;
+                top_data[i] = max;   
             }
         }
-        
+        #if 0
+        std::cout<<"bottom:"<<std::endl;
+        bottom[0]->display();
+        std::cout<<"top:"<<std::endl;
+        top[0]->display();
+        std::cout<<"max_idx:"<<std::endl;   
+        max_idx_.display();   
+        #endif
     }
 
     template <typename Dtype>
@@ -214,13 +226,20 @@ namespace caffe {
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom)
     {
         Dtype * bottom_cpu_diff_data = bottom[0]->mutable_cpu_diff();
+        caffe_set(bottom[0]->count(), Dtype(0), bottom_cpu_diff_data);
         const Dtype* top_cpu_diff_data = top[0]->cpu_diff();
         const int * diff_index_data = max_idx_.cpu_data();
         for( int i = 0; i<ouput_ele_size_; i++)
         {
             int index = diff_index_data[i];
-            bottom_cpu_diff_data[index] = top_cpu_diff_data[i];
+            bottom_cpu_diff_data[index] += top_cpu_diff_data[i];
         }
+        #if 0
+        std::cout<<"top diff:"<<std::endl;
+        top[0]->display(true);
+        std::cout<<"bottom diff:"<<std::endl;
+        bottom[0]->display(true);
+        #endif
     }
 
     #ifdef CPU_ONLY
