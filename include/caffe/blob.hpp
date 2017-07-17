@@ -128,6 +128,14 @@ class Blob {
         std::cout<<std::endl;
       }
     }
+    else
+    {
+      for( int i = 0; i<count(); i++ )
+      {
+        std::cout<<data[i]<<",";
+      }
+      std::cout<<std::endl;
+    }
   }
   /**
    * @brief Compute the volume of a slice; i.e., the product of dimensions
