@@ -402,4 +402,42 @@ template void col2data_cpu<double>( double* data, const int num_spatial_axes,
     const int* kernel_shape, const int* pad, const int* stride,
     const double* data_col);
 
+  template <typename Dtype>
+  void data2col_cpu_v2( Dtype* data, const Dtype* data_col, 
+            const int input_offset_len, const int* input_offset, 
+            const int kernel_offset_len, const int* kernel_offset,
+            const int* paded_map )
+  {
+    Dtype* dst;
+    const Dtype* src;
+    int paded_start_offset, start_offset;
+    dst = data_col;
+    src = data;
+    for( int i=0; i<input_offset_len; i++ )
+    {
+      dst++;
+      paded_start_offset = input_offset[i];
+      start_offset = paded_map[paded_start_offset];
+      for( int j = 0; j<kernel_offset_len; j++ )
+      {
+        if( start_offset == -1 )
+        {
+          dst[j*input_offset_len] = 0 ;
+        }
+        else
+        {
+          dst[j*input_offset_len] = src[start_offset];
+        }   
+      }
+    }
+  }
+
+  template <typename Dtype>
+  void col2data_cpu_v2( Dtype* data, const Dtype* data_col, 
+            const int input_offset_len, const int* input_offset, 
+            const int kernel_offset_len, const int* kernel_offset,
+            const int* paded_map )
+  {
+   
+  }
 }  // namespace caffe

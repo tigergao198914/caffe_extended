@@ -32,16 +32,10 @@ protected:
     virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
         const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
     virtual inline bool reverse_dimensions() { return false; }
-    virtual void compute_output_shape();
+    //virtual void compute_output_shape();
     virtual void LayerSetUp( const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top);
     virtual void Reshape( const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top);
-
-    std::vector<int> output_shape_;
-    int num_spatial_axes_;
-
-    int weight_dim_;
-    int feature_num_;
-    int kernel_dim_;
+#if 0
     Blob<Dtype> feature_cols_; //get weight from param
     Blob<int> feature_cols_shape_;
     std::vector<int> feature_cols_shape_vector_;
@@ -66,7 +60,41 @@ protected:
     Blob<int> data_col_buffer_shape_;
     std::vector<int> data_col_buffer_shape_vector_;
     Blob<Dtype> data_cols_; 
+#endif
 
+    int num_spatial_axes_;
+    int feature_num_;
+    int kernel_total_size_;
+    int input_sample_total_size_;
+    int output_sample_total_size_;
+
+    vector<int> input_shape_;
+    vector<int> kernel_shape_;
+    vector<int> stride_;
+    vector<int> pad_;
+    vector<int> dilation_;
+    vector<int> input_paded_shape_; 
+    vector<int> output_shape_;
+    Blob<int> input_offset_;    //map output to start index of input area
+    Blob<int> paded_index_map_; //map paded input index to input index
+    Blob<int> kernel_offset_;   //how much index of input moves when the kernel index increase
+    Blob<Dtype> data_cols_;
+    Blob<Dtype> img2col_map_;
+
+
+    vector<int> weight_shape_;
+    vector<int> kernel_stride_;
+    vector<int> kernel_pad_;
+    vector<int> weight_paded_shape_;
+    vector<int> weight_output_shape_;
+ 
+    Blob<int> weight_input_offset_;
+    Blob<int> paded_weight_index_map_;
+    Blob<int> weight_offset_;
+    Blob<Dtype> weight_cols_;
+    Blob<Dtype> weight2col_map_;
+
+    
     /*generate kernel map from learnable param*/
     void gen_kernel_cpu()
     {
@@ -80,6 +108,8 @@ protected:
 
     void gen_kernel_gpu()
     {
+       std::cout<< "weight:"<<std::endl;
+       this->blobs_[0]->display();
        Dtype *weight_data = this->blobs_[0]->mutable_gpu_data();
        data2col_gpu(weight_data, num_spatial_axes_, feature_cols_.count(1),
           weight_shape_.gpu_data(),  feature_cols_shape_.gpu_data(),

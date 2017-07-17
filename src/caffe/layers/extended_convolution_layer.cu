@@ -7,6 +7,8 @@ template <typename Dtype>
 void ExtendedConvolutionLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
     gen_kernel_gpu();
+    std::cout<<"feature_cols:"<<std::endl;
+    feature_cols_.display();
     const Dtype* weight = feature_cols_.gpu_data();
     Dtype *bottom_data = bottom[0]->mutable_gpu_data();
     Dtype *top_data = top[0]->mutable_gpu_data();

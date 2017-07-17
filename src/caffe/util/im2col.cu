@@ -607,6 +607,8 @@ __global__ void data2col_nd_gpu_kernel(
           if( data2col )
           {
             data_col[col_index] = data_im[img_index];
+            printf("index %d, data_col[%d]:%lf, data_im[%d]:%lf\n",
+              index,col_index,data_col[col_index],img_index,data_im[img_index]);
           }
           else
           {
@@ -620,12 +622,12 @@ __global__ void data2col_nd_gpu_kernel(
 }
 
 template <typename Dtype>
-void data2col_gpu( Dtype* data_col, const int num_spatial_axes,
+void data2col_gpu( Dtype* data_im, const int num_spatial_axes,
     const int num_kernels, const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    Dtype* data_im) {
+    Dtype* data_col) {
     // num_axes should be smaller than block size
-    DCHECK_LT(num_spatial_axes, CAFFE_CUDA_NUM_THREADS);
+    DCHECK_LT(num_spatial_axes, MAXIMIZE_AXES_NUM);
     data2col_nd_gpu_kernel<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
         <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
         num_kernels, data_im, num_spatial_axes, im_shape, col_shape,
@@ -634,24 +636,24 @@ void data2col_gpu( Dtype* data_col, const int num_spatial_axes,
     CUDA_POST_KERNEL_CHECK;
 }
 
-template void data2col_gpu<float>( float* data_col, const int num_spatial_axes,
+template void data2col_gpu<float>( float* data_im, const int num_spatial_axes,
     const int num_kernels, const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    float* data_im);
+    float* data_col);
 
-template void data2col_gpu<double>( double* data_col, const int num_spatial_axes,
+template void data2col_gpu<double>( double* data_im, const int num_spatial_axes,
     const int num_kernels, const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    double* data_im);
+    double* data_col);
 
 
 template <typename Dtype>
-void col2data_gpu( Dtype* data_col, const int num_spatial_axes,
+void col2data_gpu( Dtype* data_im, const int num_spatial_axes,
     const int num_kernels, const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
-    Dtype* data_im) {
+    Dtype* data_col) {
     // num_axes should be smaller than block size
-    DCHECK_LT(num_spatial_axes, CAFFE_CUDA_NUM_THREADS);
+    DCHECK_LT(num_spatial_axes, MAXIMIZE_AXES_NUM);
     data2col_nd_gpu_kernel<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
         <<<CAFFE_GET_BLOCKS(num_kernels), CAFFE_CUDA_NUM_THREADS>>>(
         num_kernels, data_im, num_spatial_axes, im_shape, col_shape,
