@@ -551,4 +551,28 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestBackword) {
         this->blob_top_vec_, false);
 }
 
+TYPED_TEST(ExtendedConvolutionLayerTest, TestBackword1) {
+    typedef typename TypeParam::Dtype Dtype;
+    LayerParameter layer_param;
+    ExtendedConvolutionParameter* convolution_param =
+        layer_param.mutable_extended_convolution_param();
+    convolution_param->add_kernel_size(1);
+    convolution_param->add_kernel_size(5);
+    convolution_param->add_kernel_size(5);
+    convolution_param->add_stride(1);
+    convolution_param->add_stride(1);
+    convolution_param->add_stride(1);
+    convolution_param->add_weight_dim(1);
+    convolution_param->add_weight_dim(9);
+    convolution_param->add_weight_dim(9);
+    convolution_param->add_feature_pad(0);
+    convolution_param->add_feature_stride(2);
+
+    ExtendedConvolutionLayer<Dtype> layer(layer_param);
+
+    GradientChecker<Dtype> checker(1e-2, 1e-3);
+    checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+        this->blob_top_vec_, false);
+}
+
 };

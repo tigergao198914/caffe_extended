@@ -139,4 +139,45 @@ TYPED_TEST(ExtendedPoolingLayerTest, TestBackword) {
         this->blob_top_vec_, false);
 }
 
+TYPED_TEST(ExtendedPoolingLayerTest, TestBackword1) {
+    typedef typename TypeParam::Dtype Dtype;                                                                             
+    LayerParameter layer_param;
+    ExtendedPoolingParameter* pooling_param = layer_param.mutable_extended_pooling_param();
+    pooling_param->add_kernel_size(1);
+    pooling_param->add_kernel_size(2);
+    pooling_param->add_kernel_size(2);
+    pooling_param->add_kernel_size(1);
+    pooling_param->add_kernel_size(2);
+    pooling_param->add_kernel_size(2);
+    pooling_param->add_kernel_size(1);
+    pooling_param->add_kernel_size(2);
+    pooling_param->add_kernel_size(2);
+    pooling_param->add_pad(0);
+    pooling_param->add_stride(2);
+    //pooling_param->set_pool(PoolingParameter_PoolMethod_MAX);
+    vector<int> shape;
+    shape.push_back(1);
+    shape.push_back(1);
+    shape.push_back(2);
+    shape.push_back(2);
+    shape.push_back(1);
+    shape.push_back(3);
+    shape.push_back(3);
+    shape.push_back(1);
+    shape.push_back(5);
+    shape.push_back(5);
+    this->blob_bottom_->Reshape(shape);
+    ExtendedPoolingLayer<Dtype> layer(layer_param);
+
+    srand(0xf278932);
+    for (int i = 0; i < this->blob_bottom_->count(); i++) 
+    {
+      this->blob_bottom_->mutable_cpu_data()[i] = random()%5000;
+    }
+
+    GradientChecker<Dtype> checker(1e-2, 1e-3);
+    checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+        this->blob_top_vec_, false);
+}
+
 } 
