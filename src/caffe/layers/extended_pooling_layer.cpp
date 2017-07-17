@@ -13,7 +13,7 @@ namespace caffe {
         {
             for( int i=0; i<axes_num_; i++ )
             {
-                kernel_size_.push_back(pool_param.kernel_size(0));
+               kernel_size_.push_back(pool_param.kernel_size(0));
             }
         }   
         else if( pool_param.kernel_size_size()==axes_num_ )
@@ -237,9 +237,10 @@ namespace caffe {
         #if 0
         std::cout<<"top diff:"<<std::endl;
         top[0]->display(true);
-        std::cout<<"bottom diff:"<<std::endl;
-        bottom[0]->display(true);
         #endif
+        std::cout<<"bottom cpu diff:"<<std::endl;
+        bottom[0]->display(true);
+        
     }
 
     #ifdef CPU_ONLY

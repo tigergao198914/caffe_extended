@@ -28,12 +28,12 @@ __global__ void MaxPoolForward(
             if( offset!=-1)
             {
                 max_offset = (max>bottom_data[offset])?max_offset:offset;
-                max = (max>bottom_data[offset])?max:bottom_data[offset];
-                
+                max = (max>bottom_data[offset])?max:bottom_data[offset];               
             }
         }
         max_idx_data[index] = max_offset;
         top_data[index] = max;
+        //printf("index:%d, top_data[index]:%f\n", index, top_data[index]);
   }
 }
 
@@ -42,13 +42,22 @@ __global__ void MaxPoolBackward(const int nthreads,  Dtype*  bottom_data,
     const int* offset_data, const Dtype* top_data) {
   CUDA_KERNEL_LOOP(index, nthreads) {
     int i = offset_data[index];
-    bottom_data[i] += top_data[index];
+    #if 1
+    atomicAdd( &bottom_data[i], top_data[index]);
+    //printf("index:%d, bottom_data[%d]:%lf\n", index,i, bottom_data[i]);
+    #else
+
+    #endif
   }
 }
 
 template <typename Dtype>
 void ExtendedPoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
+      #if 0
+      std::cout << "bottom gpu:"<<std::endl;
+      bottom[0]->display();
+      #endif
       MaxPoolForward<Dtype><<<CAFFE_GET_BLOCKS(ouput_ele_size_), CAFFE_CUDA_NUM_THREADS>>>(
           ouput_ele_size_,
           kernel_ele_size_,
@@ -59,7 +68,12 @@ void ExtendedPoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom
           max_idx_.mutable_gpu_data(),
           top[0]->mutable_gpu_data()
       );
-      
+      #if 0
+      //std::cout << "bottom gpu:"<<std::endl;
+      //bottom[0]->display();
+      std::cout << "top gpu:"<<std::endl;
+      top[0]->display();
+      #endif
 }
 
 template <typename Dtype>
@@ -72,7 +86,14 @@ void ExtendedPoolingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
           this->max_idx_.gpu_data(),
           top[0]->gpu_diff()
       );
-      //bottom[0]->display(true);
+      #if 0
+      std::cout<<"top gpu diff:"<<std::endl;
+      top[0]->display(true);
+      std::cout<<"max id offset:"<<std::endl;
+      max_idx_.display();
+      std::cout<<"bottom gpu diff:"<<std::endl;
+      bottom[0]->display(true);
+      #endif
 }
 
 INSTANTIATE_LAYER_GPU_FUNCS(ExtendedPoolingLayer);
