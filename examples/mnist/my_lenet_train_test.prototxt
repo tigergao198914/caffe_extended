@@ -49,15 +49,22 @@ layer {
     stride: 1
     stride: 1
     weight_dim: 1
-    weight_dim: 19
-    weight_dim: 19 
+    weight_dim: 15
+    weight_dim: 15
     feature_pad: 0
+    feature_pad: 0
+    feature_pad: 0
+    feature_stride: 1
+    feature_stride: 2
     feature_stride: 2
     weight_filler {
-      type: "positive_unitball"
+      type: "uniform"
+      min: -0.3
+      max: 0.3
     }
   }
 }
+
 layer {
   name: "pool1"
   type: "ExtendedPooling"
@@ -65,8 +72,18 @@ layer {
   top: "pool1"
   extended_pooling_param {
     pool: MAX
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 2
     kernel_size: 2
     pad: 0
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 2
     stride: 2
   }
 }
@@ -80,22 +97,39 @@ layer {
   }
   extended_convolution_param {
     kernel_size: 1
-    kernel_size: 2
-    kernel_size: 2
+    kernel_size: 5
+    kernel_size: 5
     kernel_size: 1
-    kernel_size: 2
-    kernel_size: 2
+    kernel_size: 5
+    kernel_size: 5
     stride: 1
+    
+    weight_dim: 1
+    weight_dim: 19 
+    weight_dim: 19
     weight_dim: 1
     weight_dim: 5 
     weight_dim: 5
+
     feature_pad: 0
+
+    feature_stride: 1
     feature_stride: 2
+    feature_stride: 2
+    feature_stride: 1
+    feature_stride: 1
+    feature_stride: 1
+
     weight_filler {
-      type: "positive_unitball"
+      type: "uniform"
+      min: -0.1
+      max: 0.1
     }
   }
 }
+
+
+
 layer {
   name: "pool2"
   type: "ExtendedPooling"
@@ -103,7 +137,29 @@ layer {
   top: "pool2"
   extended_pooling_param {
     pool: MAX
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
+    kernel_size: 1
     kernel_size: 2
+    kernel_size: 2
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 1
+    stride: 2
     stride: 2
   }
 }
@@ -120,7 +176,7 @@ layer {
     lr_mult: 2
   }
   inner_product_param {
-    num_output: 100
+    num_output: 500
     weight_filler {
       type: "xavier"
     }
