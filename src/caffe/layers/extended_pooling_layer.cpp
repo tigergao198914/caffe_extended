@@ -190,25 +190,37 @@ namespace caffe {
 
         const int* kernel_offset_data = kernel_offset_.cpu_data();
         const int* input_offset_data = input_offset_.cpu_data();
+
+        int sample_num = bottom[0]->shape(0);
+        int sample_size = bottom[0]->count(1);
+        int output_sample_size = top[0]->count(1);
+
         if( PoolingParameter_PoolMethod_MAX == this->layer_param_.pooling_param().pool()  )
         {
-            for( int i=0; i<ouput_ele_size_; i++ )
+
+            for( int k=0; k<sample_num; k++ )
             {
-                int start_offset = input_offset_data[i];
-                Dtype max = -0x7fffffff;
-                int max_offset  = 0;
-                for( int j=0; j<kernel_ele_size_; j++ )
+                for( int i=0; i<ouput_ele_size_; i++ )
                 {
-                    int paded_offset = start_offset + kernel_offset_data[j];
-                    int offset = paded_index_map_data[paded_offset];
-                    if( offset!=-1)
+                    int start_offset = input_offset_data[i];
+                    Dtype max = -0x7fffffff;
+                    int max_offset  = 0;
+                    for( int j=0; j<kernel_ele_size_; j++ )
                     {
-                        max_offset = (max>bottom_data[offset])?max_offset:offset;
-                        max = (max>bottom_data[offset])?max:bottom_data[offset];
+                        int paded_offset = start_offset + kernel_offset_data[j];
+                        int offset = paded_index_map_data[paded_offset];
+                        if( offset!=-1)
+                        {
+                            max_offset = (max>bottom_data[offset])?max_offset:offset;
+                            max = (max>bottom_data[offset])?max:bottom_data[offset];
+                        }
                     }
+                    max_idx_data[i] = max_offset;
+                    top_data[i] = max;   
                 }
-                max_idx_data[i] = max_offset;
-                top_data[i] = max;   
+                top_data += output_sample_size;
+                bottom_data += sample_size;
+                max_idx_data += output_sample_size;
             }
         }
         #if 0
@@ -229,17 +241,29 @@ namespace caffe {
         caffe_set(bottom[0]->count(), Dtype(0), bottom_cpu_diff_data);
         const Dtype* top_cpu_diff_data = top[0]->cpu_diff();
         const int * diff_index_data = max_idx_.cpu_data();
-        for( int i = 0; i<ouput_ele_size_; i++)
+
+        int sample_num = bottom[0]->shape(0);
+        int sample_size = bottom[0]->count(1);
+        int output_sample_size = top[0]->count(1);
+
+        for( int j=0; j<sample_num; j++)
         {
-            int index = diff_index_data[i];
-            bottom_cpu_diff_data[index] += top_cpu_diff_data[i];
+            for( int i = 0; i<ouput_ele_size_; i++)
+            {
+                int index = diff_index_data[i];
+                bottom_cpu_diff_data[index] += top_cpu_diff_data[i];
+            }
+            diff_index_data += output_sample_size;
+            bottom_cpu_diff_data += sample_size;
+            top_cpu_diff_data += output_sample_size;
         }
+
         #if 0
         std::cout<<"top diff:"<<std::endl;
         top[0]->display(true);
         #endif
-        std::cout<<"bottom cpu diff:"<<std::endl;
-        bottom[0]->display(true);
+        //std::cout<<"bottom cpu diff:"<<std::endl;
+        //bottom[0]->display(true);
         
     }
 

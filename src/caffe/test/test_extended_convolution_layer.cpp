@@ -5,6 +5,7 @@
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
+#include "caffe/layers/conv_layer.hpp"
 #include "caffe/layers/extended_convolution_layer.hpp"
 
 #ifdef USE_CUDNN
@@ -476,19 +477,25 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestSetup) {
 
   convolution_param->add_weight_dim(9);
   convolution_param->add_weight_dim(9);
+  convolution_param->add_weight_dim(3);
+  convolution_param->add_feature_pad(0);
+  convolution_param->add_feature_pad(0);
   convolution_param->add_feature_pad(0);
   convolution_param->add_feature_stride(2);
+  convolution_param->add_feature_stride(2);
+  convolution_param->add_feature_stride(1);
   
   shared_ptr<Layer<Dtype> > layer(
       new ExtendedConvolutionLayer<Dtype>(layer_param));
   layer->SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
-  vector<int> top_shape = this->blob_top_->shape();
-  EXPECT_EQ( top_shape[0], 2 );
-  EXPECT_EQ( top_shape[1], 4 );
-  EXPECT_EQ( top_shape[2], 4 );
-  EXPECT_EQ( top_shape[3], 1 );
-  EXPECT_EQ( top_shape[4], 2 );
-  EXPECT_EQ( top_shape[5], 1 );
+  //vector<int> top_shape = this->blob_top_->shape();
+  EXPECT_EQ(  this->blob_top_->shape()[0], 2 );
+  EXPECT_EQ(  this->blob_top_->shape()[1], 4 );
+  EXPECT_EQ(  this->blob_top_->shape()[2], 4 );
+  EXPECT_EQ(  this->blob_top_->shape()[3], 1 );
+  EXPECT_EQ(  this->blob_top_->shape()[4], 1 );
+  EXPECT_EQ(  this->blob_top_->shape()[5], 2 );
+  EXPECT_EQ(  this->blob_top_->shape()[6], 1 );
 }
 
 TYPED_TEST(ExtendedConvolutionLayerTest, TestForward) {
@@ -500,10 +507,13 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestForward) {
     convolution_param->add_stride(2);
     convolution_param->add_weight_dim(9);
     convolution_param->add_weight_dim(9);
+    convolution_param->add_weight_dim(3);
+    convolution_param->add_feature_pad(0);
     convolution_param->add_feature_pad(0);
     convolution_param->add_feature_pad(0);
     convolution_param->add_feature_stride(2);
     convolution_param->add_feature_stride(2);
+    convolution_param->add_feature_stride(1);
     convolution_param->mutable_weight_filler()->set_type("gaussian");
 
     shared_ptr<Layer<Dtype> > layer(
@@ -518,14 +528,107 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestForward) {
         convolution_param, this->blob_bottom_vec_[0]->num_axes()-1);
 
     vector<int> top_shape  = this->blob_top_vec_[0]->shape();
-    EXPECT_EQ( top_shape.size(), 6 );
+    EXPECT_EQ( top_shape.size(), 7 );
 
     const Dtype *top_data_ref = top_ref->cpu_data();
     const Dtype *top_data = this->blob_top_vec_[0]->cpu_data();
 
     for( int i=0; i<this->blob_top_vec_[0]->count(); i++ )
     {
-        EXPECT_EQ( top_data_ref[i], top_data[i] );
+        EXPECT_NEAR(top_data[i], top_data_ref[i], 1e-4);
+    }
+}
+
+
+TYPED_TEST(ExtendedConvolutionLayerTest, TestForward_mnist) {
+    typedef typename TypeParam::Dtype Dtype;
+
+    //init params of extended convolutional network
+    LayerParameter layer_param_extended;
+    ExtendedConvolutionParameter* extended_convolution_param =
+        layer_param_extended.mutable_extended_convolution_param();
+    extended_convolution_param->add_kernel_size(1);
+    extended_convolution_param->add_kernel_size(5);
+    extended_convolution_param->add_kernel_size(5);
+    extended_convolution_param->add_stride(1);
+    extended_convolution_param->add_stride(1);
+    extended_convolution_param->add_stride(1);
+    extended_convolution_param->add_weight_dim(1);
+    extended_convolution_param->add_weight_dim(25);
+    extended_convolution_param->add_weight_dim(25);
+    extended_convolution_param->add_feature_pad(0);
+    extended_convolution_param->add_feature_pad(0);
+    extended_convolution_param->add_feature_pad(0);
+    extended_convolution_param->add_feature_stride(1);
+    extended_convolution_param->add_feature_stride(5);
+    extended_convolution_param->add_feature_stride(5);
+    extended_convolution_param->mutable_weight_filler()->set_type("gaussian");
+    //extended_convolution_param->mutable_weight_filler()->set_value(1);
+
+    //init params of convolutional network
+    LayerParameter layer_param;
+    ConvolutionParameter* convolution_param =
+        layer_param.mutable_convolution_param();
+    convolution_param->add_kernel_size(5);
+    convolution_param->add_stride(1);
+    convolution_param->set_num_output(25);
+    convolution_param->mutable_weight_filler()->set_type("gaussian");
+    //convolution_param->mutable_weight_filler()->set_value(1);
+
+
+
+    //init input data, store in blob_bottom_vec
+    Blob<Dtype>* const data = new Blob<Dtype>(1,1,28,28);
+    vector<Blob<Dtype>*> blob_bottom_vec;
+    blob_bottom_vec.push_back(data);
+    FillerParameter filler_param;
+    filler_param.set_value(1.);
+    GaussianFiller<Dtype> filler(filler_param);
+    filler.Fill(data);
+
+    //init output data, store in blob_top_vec
+    Blob<Dtype>* const extended_output = new Blob<Dtype>();
+    vector<Blob<Dtype>*> extended_blob_top_vec;
+    extended_blob_top_vec.push_back(extended_output);
+
+    Blob<Dtype>* const output = new Blob<Dtype>();
+    vector<Blob<Dtype>*> blob_top_vec;
+    blob_top_vec.push_back(output);
+
+    //setup extended convolutional layer and forword
+    shared_ptr<Layer<Dtype> > extended_layer(
+        new ExtendedConvolutionLayer<Dtype>(layer_param_extended));
+    extended_layer->SetUp(   blob_bottom_vec, extended_blob_top_vec );
+    extended_layer->Forward( blob_bottom_vec, extended_blob_top_vec );
+
+    //setup convolutional layer and forword
+    shared_ptr<Layer<Dtype> > layer(
+        new ConvolutionLayer<Dtype>(layer_param));
+    layer->SetUp(   blob_bottom_vec, blob_top_vec );
+
+    const Dtype *extended_weight_data = extended_layer->blobs()[0]->cpu_data();
+    Dtype *weight_data = layer->blobs()[0]->mutable_cpu_data();
+    for( int i=0; i<25; i++ )
+    {
+        for( int j=0; j<25; j++ )
+        {
+            std::cout<< "index:"<< i*25+j << "; extended index:" <<  (i/5*5+j/5)*25+(i%5)*5+j%5 << std::endl;
+            weight_data[i*25+j] = extended_weight_data[ (i/5*5+j/5)*25+(i%5)*5+j%5 ];
+        }
+    }
+    //extended_layer->blobs()[0]->display();
+    //layer->blobs()[0]->display();
+    
+
+    layer->Forward( blob_bottom_vec, blob_top_vec );
+
+    //check two output with same input and param
+    const Dtype *extended_output_data  = extended_output->cpu_data();
+    const Dtype *output_data = output->cpu_data();
+    int count = extended_blob_top_vec[0]->count();
+    for( int i=0; i<count; i++ )
+    {
+        EXPECT_NEAR(extended_output_data[i], output_data[i], 1e-4);
     }
 
 }
@@ -539,10 +642,14 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestBackword) {
     convolution_param->add_stride(2);
     convolution_param->add_weight_dim(9);
     convolution_param->add_weight_dim(9);
+    convolution_param->add_weight_dim(3);
+    convolution_param->add_feature_pad(0);
     convolution_param->add_feature_pad(0);
     convolution_param->add_feature_pad(0);
     convolution_param->add_feature_stride(2);
     convolution_param->add_feature_stride(2);
+    convolution_param->add_feature_stride(1);
+    convolution_param->mutable_weight_filler()->set_type("gaussian");
 
     ExtendedConvolutionLayer<Dtype> layer(layer_param);
 
@@ -557,8 +664,8 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestBackword1) {
     ExtendedConvolutionParameter* convolution_param =
         layer_param.mutable_extended_convolution_param();
     convolution_param->add_kernel_size(1);
-    convolution_param->add_kernel_size(5);
-    convolution_param->add_kernel_size(5);
+    convolution_param->add_kernel_size(3);
+    convolution_param->add_kernel_size(2);
     convolution_param->add_stride(1);
     convolution_param->add_stride(1);
     convolution_param->add_stride(1);
@@ -567,7 +674,8 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestBackword1) {
     convolution_param->add_weight_dim(9);
     convolution_param->add_feature_pad(0);
     convolution_param->add_feature_stride(2);
-
+    convolution_param->mutable_weight_filler()->set_type("gaussian");
+    
     ExtendedConvolutionLayer<Dtype> layer(layer_param);
 
     GradientChecker<Dtype> checker(1e-2, 1e-3);

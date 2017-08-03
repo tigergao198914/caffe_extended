@@ -5,6 +5,7 @@
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
+#include "caffe/layers/pooling_layer.hpp"
 #include "caffe/layers/extended_pool_layer.hpp"
 
 #include "caffe/test/test_caffe_main.hpp"
@@ -115,6 +116,86 @@ TYPED_TEST(ExtendedPoolingLayerTest, TestForward)
     EXPECT_EQ(this->blob_top_->cpu_data()[21], 57);
     EXPECT_EQ(this->blob_top_->cpu_data()[22], 58);
     EXPECT_EQ(this->blob_top_->cpu_data()[23], 59);
+}
+
+TYPED_TEST(ExtendedPoolingLayerTest, TestForward_mnist)
+{
+    typedef typename TypeParam::Dtype Dtype;     
+    //init params of extended pooling layer                                                                        
+    LayerParameter extended_layer_param;
+    ExtendedPoolingParameter* extended_pooling_param = extended_layer_param.mutable_extended_pooling_param();
+    extended_pooling_param->add_kernel_size(1);
+    extended_pooling_param->add_kernel_size(1);
+    extended_pooling_param->add_kernel_size(1);
+    extended_pooling_param->add_kernel_size(1);
+    extended_pooling_param->add_kernel_size(2);
+    extended_pooling_param->add_kernel_size(2);
+    extended_pooling_param->add_pad(0);
+    extended_pooling_param->add_stride(1);
+    extended_pooling_param->add_stride(1);
+    extended_pooling_param->add_stride(1);
+    extended_pooling_param->add_stride(1);
+    extended_pooling_param->add_stride(2);
+    extended_pooling_param->add_stride(2);
+
+    //init params of pooling layer
+    LayerParameter layer_param;
+    PoolingParameter* pooling_param = layer_param.mutable_pooling_param();
+    pooling_param->set_kernel_size(2);
+    pooling_param->set_pad(0);
+    pooling_param->set_stride(2);
+
+    //init input data, store in blob_bottom_vec
+    std::vector<int> extended_shape;
+    extended_shape.push_back(2);
+    extended_shape.push_back(1);
+    extended_shape.push_back(5);
+    extended_shape.push_back(5);
+    extended_shape.push_back(1);
+    extended_shape.push_back(24);
+    extended_shape.push_back(24);
+    Blob<Dtype>* const data = new Blob<Dtype>(extended_shape);
+    vector<Blob<Dtype>*> blob_bottom_vec;
+    blob_bottom_vec.push_back(data);
+    FillerParameter filler_param;
+    filler_param.set_value(1.);
+    GaussianFiller<Dtype> filler(filler_param);
+    filler.Fill(data);
+
+    //init output data, store in blob_top_vec
+    Blob<Dtype>* const extended_output = new Blob<Dtype>();
+    vector<Blob<Dtype>*> extended_blob_top_vec;
+    extended_blob_top_vec.push_back(extended_output);
+
+    Blob<Dtype>* const output = new Blob<Dtype>();
+    vector<Blob<Dtype>*> blob_top_vec;
+    blob_top_vec.push_back(output);
+
+    //setup extended convolutional layer and forword
+    shared_ptr<Layer<Dtype> > extended_layer(
+        new ExtendedPoolingLayer<Dtype>(extended_layer_param));
+    extended_layer->SetUp(   blob_bottom_vec, extended_blob_top_vec );
+    extended_layer->Forward( blob_bottom_vec, extended_blob_top_vec );
+
+    //setup convolutional layer and forword
+    std::vector<int> shape;
+    shape.push_back(2);
+    shape.push_back(25);
+    shape.push_back(24);
+    shape.push_back(24);
+    data->Reshape(shape);
+    shared_ptr<Layer<Dtype> > layer(
+        new PoolingLayer<Dtype>(layer_param));
+    layer->SetUp(   blob_bottom_vec, blob_top_vec );
+    layer->Forward( blob_bottom_vec, blob_top_vec );
+
+    //check two output with same input and param
+    const Dtype *extended_output_data  = extended_output->cpu_data();
+    const Dtype *output_data = output->cpu_data();
+    for( int i=0; i<extended_blob_top_vec[0]->count(); i++ )
+    {
+        EXPECT_NEAR(extended_output_data[i], output_data[i], 1e-4);
+    }
 }
 
 TYPED_TEST(ExtendedPoolingLayerTest, TestBackword) {

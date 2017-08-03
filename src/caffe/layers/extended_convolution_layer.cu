@@ -6,48 +6,49 @@ namespace caffe {
 template <typename Dtype>
 void ExtendedConvolutionLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-    gen_kernel_gpu();
-    std::cout<<"feature_cols:"<<std::endl;
-    feature_cols_.display();
-    const Dtype* weight = feature_cols_.gpu_data();
-    Dtype *bottom_data = bottom[0]->mutable_gpu_data();
+    //bottom[0]->display();
+    gen_weight_col(true);
+    const Dtype* weight = weight_cols_.gpu_data();
+    const Dtype *bottom_data = bottom[0]->gpu_data();
     Dtype *top_data = top[0]->mutable_gpu_data();
     for ( int n = 0; n < sample_num_; ++n ){
-        this->forward_gpu_gemm( bottom_data + n * bottom_sample_dim_, weight,
-            top_data + n * top_sample_dim_);
+        this->forward_gpu_gemm( bottom_data + n * input_sample_total_size_, weight,
+            top_data + n * output_sample_total_size_);
     }
+    //top[0]->display();
 }
 
 template <typename Dtype>
 void ExtendedConvolutionLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom)
 {
-    gen_kernel_gpu();
-    const Dtype* weight = feature_cols_.gpu_data();
-    Dtype* weight_diff = feature_cols_.mutable_gpu_diff();
-    
+    //top[0]->display(true);
+    gen_weight_col(true);
+    const Dtype* weight = weight_cols_.gpu_data();
+    Dtype* weight_diff = weight_cols_.mutable_gpu_diff();
+    caffe_gpu_set( weight_cols_.count(), static_cast<Dtype>(0), weight_diff );   
     for (int i = 0; i < top.size(); ++i) {
-        Dtype* top_diff = top[i]->mutable_gpu_diff();
-        Dtype* bottom_data = bottom[i]->mutable_gpu_data();
+        const Dtype* top_diff = top[i]->mutable_gpu_diff();
+        const Dtype* bottom_data = bottom[i]->mutable_gpu_data();
         Dtype* bottom_diff = bottom[i]->mutable_gpu_diff();
     
         if (this->param_propagate_down_[0] || propagate_down[i]) {
             for (int n = 0; n < sample_num_; ++n) {
                 // gradient w.r.t. weight. Note that we will accumulate diffs.
                 if (this->param_propagate_down_[0]) {
-                this->weight_gpu_gemm(bottom_data + n * bottom_sample_dim_,
-                    weight_diff, top_diff + n * top_sample_dim_);
+                this->weight_gpu_gemm(bottom_data + n * input_sample_total_size_,
+                    weight_diff, top_diff + n * output_sample_total_size_);
                 }
                 // gradient w.r.t. bottom data, if necessary.
-                if (false) {//propagate_down[i]
-                    this->backward_gpu_gemm(top_diff + n * top_sample_dim_, weight,
-                        bottom_diff + n * bottom_sample_dim_);
+                if (propagate_down[i]) {
+                    this->backward_gpu_gemm(top_diff + n * output_sample_total_size_, weight,
+                        bottom_diff + n * input_sample_total_size_);
                 }
             }
         }
     }
 
-    compute_diff_from_kernel_gpu();
+    gen_weight_diff(true);
 }
 
 INSTANTIATE_LAYER_GPU_FUNCS(ExtendedConvolutionLayer);

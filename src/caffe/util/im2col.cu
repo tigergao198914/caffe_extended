@@ -467,7 +467,7 @@ void col2im_nd_gpu(const Dtype* data_col, const int num_spatial_axes,
           kernel_shape, pad, stride, dilation, data_im);
     break;
   case 7:
-    col2im_nd_gpu_kernel<Dtype, 7>  // NOLINT_NEXT_LINE(whitespace/operators)
+    col2im_nd_gpu_kernel<Dtype, 7>  // NOLINT_NEXT_LINE(whitespace/operators)data_im
           <<<CAFFE_GET_BLOCKS(im_size), CAFFE_CUDA_NUM_THREADS>>>(
           im_size, data_col, im_shape, col_shape,
           kernel_shape, pad, stride, dilation, data_im);
@@ -671,5 +671,80 @@ template void col2data_gpu<double>( double* data_col, const int num_spatial_axes
     const int num_kernels, const int* im_shape, const int* col_shape,
     const int* kernel_shape, const int* pad, const int* stride,
     double* data_im);
+
+
+template <typename Dtype>
+__global__ void data2col_nd_gpu_kernel_v2(
+    const int n,
+    const Dtype* data,
+    Dtype* data_col,
+    const int *data2col_map) 
+{
+    int index;
+    CUDA_KERNEL_LOOP(i, n) 
+    {
+       index = data2col_map[i];
+       if( index==-1 )
+       {
+          data_col[i] = 0;
+       }
+       else
+       {
+          data_col[i] = data[index]; 
+       }
+    }
+}
+
+template <typename Dtype>
+__global__ void col2data_nd_gpu_kernel_v2(
+    const int n,
+    Dtype* data, 
+    const Dtype* data_col, 
+    const int *col2data_map, 
+    int data_ele_len) 
+{
+    int index;
+    CUDA_KERNEL_LOOP(i, n) 
+    {
+        data[i] = 0;
+        for( int j=0; j<data_ele_len; j++ )
+        {
+          index = col2data_map[i*data_ele_len+j];
+          if( index==-1 )
+          {
+            break;
+          }
+          data[i] += data_col[index];
+        }
+    }
+}
+
+
+template <typename Dtype>
+void data2col_gpu_v2( const Dtype* data,  Dtype* data_col, const int *data2col_map, int data_col_len )
+{
+  data2col_nd_gpu_kernel_v2<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
+      <<<CAFFE_GET_BLOCKS(data_col_len), CAFFE_CUDA_NUM_THREADS>>>( data_col_len, data, data_col, data2col_map);
+}
+
+template 
+void data2col_gpu_v2<float>( const float* data,  float* data_col, const int *data2col_map, int data_col_len );
+template
+void data2col_gpu_v2<double>( const double* data,  double* data_col, const int *data2col_map, int data_col_len );
+
+
+
+
+template <typename Dtype>
+void col2data_gpu_v2( Dtype* data, const Dtype* data_col, const int *col2data_map, int data_len, int data_ele_len )
+{
+  col2data_nd_gpu_kernel_v2<Dtype>  // NOLINT_NEXT_LINE(whitespace/operators)
+      <<<CAFFE_GET_BLOCKS(data_len), CAFFE_CUDA_NUM_THREADS>>>(data_len,data, data_col,col2data_map,data_ele_len); 
+}
+template 
+void col2data_gpu_v2<float>( float* data, const float* data_col, const int *col2data_map, int data_len, int data_ele_len );
+template
+void col2data_gpu_v2<double>( double* data, const double* data_col, const int *col2data_map, int data_len, int data_ele_len );
+
 
 }  // namespace caffe

@@ -58,21 +58,26 @@ void ExtendedPoolingLayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom
       std::cout << "bottom gpu:"<<std::endl;
       bottom[0]->display();
       #endif
-      MaxPoolForward<Dtype><<<CAFFE_GET_BLOCKS(ouput_ele_size_), CAFFE_CUDA_NUM_THREADS>>>(
-          ouput_ele_size_,
-          kernel_ele_size_,
-          bottom[0]->gpu_data(),
-          input_offset_.gpu_data(),
-          kernel_offset_.gpu_data(),
-          paded_index_map_.gpu_data(),
-          max_idx_.mutable_gpu_data(),
-          top[0]->mutable_gpu_data()
-      );
-      #if 0
+      int sample_num = bottom[0]->shape(0);
+      int sample_size = bottom[0]->count(1);
+      int output_sample_size = top[0]->count(1);
+      for( int i=0; i<sample_num; i++ )
+      {
+            MaxPoolForward<Dtype><<<CAFFE_GET_BLOCKS(ouput_ele_size_), CAFFE_CUDA_NUM_THREADS>>>(
+                ouput_ele_size_,
+                kernel_ele_size_,
+                bottom[0]->gpu_data()+sample_size*i,
+                input_offset_.gpu_data(),
+                kernel_offset_.gpu_data(),
+                paded_index_map_.gpu_data(),
+                max_idx_.mutable_gpu_data()+output_sample_size*i,
+                top[0]->mutable_gpu_data()+output_sample_size*i);
+      }
+      #if 1
       //std::cout << "bottom gpu:"<<std::endl;
       //bottom[0]->display();
-      std::cout << "top gpu:"<<std::endl;
-      top[0]->display();
+     // std::cout << "top gpu:"<<std::endl;
+      //top[0]->display();
       #endif
 }
 
@@ -80,12 +85,19 @@ template <typename Dtype>
 void ExtendedPoolingLayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
       caffe_gpu_set(bottom[0]->count(), Dtype(0.), bottom[0]->mutable_gpu_diff());
-      MaxPoolBackward<Dtype><<<CAFFE_GET_BLOCKS(ouput_ele_size_), CAFFE_CUDA_NUM_THREADS>>>(
-          ouput_ele_size_,
-          bottom[0]->mutable_gpu_diff(),
-          this->max_idx_.gpu_data(),
-          top[0]->gpu_diff()
-      );
+
+      int sample_num = bottom[0]->shape(0);
+      int sample_size = bottom[0]->count(1);
+      int output_sample_size = top[0]->count(1);
+      for( int j=0; j<sample_num; j++)
+      {
+            MaxPoolBackward<Dtype><<<CAFFE_GET_BLOCKS(ouput_ele_size_), CAFFE_CUDA_NUM_THREADS>>>(
+                ouput_ele_size_,
+                bottom[0]->mutable_gpu_diff()+j*sample_size,
+                this->max_idx_.gpu_data()+j*output_sample_size,
+                top[0]->gpu_diff()+j*output_sample_size);
+      }
+
       #if 0
       std::cout<<"top gpu diff:"<<std::endl;
       top[0]->display(true);

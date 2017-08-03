@@ -403,41 +403,50 @@ template void col2data_cpu<double>( double* data, const int num_spatial_axes,
     const double* data_col);
 
   template <typename Dtype>
-  void data2col_cpu_v2( Dtype* data, const Dtype* data_col, 
-            const int input_offset_len, const int* input_offset, 
-            const int kernel_offset_len, const int* kernel_offset,
-            const int* paded_map )
+  void data2col_cpu_v2( const Dtype* data,  Dtype* data_col, const int *data2col_map, int data_col_len )
   {
-    Dtype* dst;
-    const Dtype* src;
-    int paded_start_offset, start_offset;
-    dst = data_col;
-    src = data;
-    for( int i=0; i<input_offset_len; i++ )
+    int index;
+    for( int i=0; i<data_col_len; i++ )
     {
-      dst++;
-      paded_start_offset = input_offset[i];
-      start_offset = paded_map[paded_start_offset];
-      for( int j = 0; j<kernel_offset_len; j++ )
-      {
-        if( start_offset == -1 )
-        {
-          dst[j*input_offset_len] = 0 ;
-        }
-        else
-        {
-          dst[j*input_offset_len] = src[start_offset];
-        }   
-      }
+       index = data2col_map[i];
+       if( index==-1 )
+       {
+          data_col[i] = 0;
+       }
+       else
+       {
+          data_col[i] = data[index]; 
+       }
     }
   }
 
-  template <typename Dtype>
-  void col2data_cpu_v2( Dtype* data, const Dtype* data_col, 
-            const int input_offset_len, const int* input_offset, 
-            const int kernel_offset_len, const int* kernel_offset,
-            const int* paded_map )
+template 
+void data2col_cpu_v2<float>( const float* data,  float* data_col, const int *data2col_map, int data_col_len );
+template
+void data2col_cpu_v2<double>( const double* data,  double* data_col, const int *data2col_map, int data_col_len );
+
+template <typename Dtype>
+void col2data_cpu_v2( Dtype* data, const Dtype* data_col, const int *col2data_map, int data_len, int data_ele_len )
+{
+  int index;
+  caffe_set( data_len, static_cast<Dtype>(0), data );
+  for( int i=0; i<data_len; i++ )
   {
-   
-  }
+      for( int j=0; j<data_ele_len; j++ )
+      {
+        index = col2data_map[i*data_ele_len+j];
+        if( index==-1 )
+        {
+          break;
+        }
+        data[i] += data_col[index];
+      }
+  }  
+}
+template 
+void col2data_cpu_v2<float>( float* data, const float* data_col, const int *col2data_map, int data_len, int data_ele_len );
+template
+void col2data_cpu_v2<double>( double* data, const double* data_col, const int *col2data_map, int data_len, int data_ele_len );
+
+
 }  // namespace caffe
