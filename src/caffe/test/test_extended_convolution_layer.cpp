@@ -492,10 +492,10 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestSetup) {
   EXPECT_EQ(  this->blob_top_->shape()[0], 2 );
   EXPECT_EQ(  this->blob_top_->shape()[1], 4 );
   EXPECT_EQ(  this->blob_top_->shape()[2], 4 );
-  EXPECT_EQ(  this->blob_top_->shape()[3], 1 );
-  EXPECT_EQ(  this->blob_top_->shape()[4], 1 );
+  //EXPECT_EQ(  this->blob_top_->shape()[3], 1 );
+  //EXPECT_EQ(  this->blob_top_->shape()[4], 1 );
   EXPECT_EQ(  this->blob_top_->shape()[5], 2 );
-  EXPECT_EQ(  this->blob_top_->shape()[6], 1 );
+  //EXPECT_EQ(  this->blob_top_->shape()[6], 1 );
 }
 
 TYPED_TEST(ExtendedConvolutionLayerTest, TestForward) {
@@ -528,7 +528,7 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestForward) {
         convolution_param, this->blob_bottom_vec_[0]->num_axes()-1);
 
     vector<int> top_shape  = this->blob_top_vec_[0]->shape();
-    EXPECT_EQ( top_shape.size(), 7 );
+    EXPECT_EQ( top_shape.size(), 4 );
 
     const Dtype *top_data_ref = top_ref->cpu_data();
     const Dtype *top_data = this->blob_top_vec_[0]->cpu_data();
@@ -547,19 +547,19 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestForward_mnist) {
     LayerParameter layer_param_extended;
     ExtendedConvolutionParameter* extended_convolution_param =
         layer_param_extended.mutable_extended_convolution_param();
-    extended_convolution_param->add_kernel_size(1);
+    //extended_convolution_param->add_kernel_size(1);
     extended_convolution_param->add_kernel_size(5);
     extended_convolution_param->add_kernel_size(5);
+    //extended_convolution_param->add_stride(1);
     extended_convolution_param->add_stride(1);
     extended_convolution_param->add_stride(1);
-    extended_convolution_param->add_stride(1);
-    extended_convolution_param->add_weight_dim(1);
+    //extended_convolution_param->add_weight_dim(1);
     extended_convolution_param->add_weight_dim(25);
     extended_convolution_param->add_weight_dim(25);
+    //extended_convolution_param->add_feature_pad(0);
     extended_convolution_param->add_feature_pad(0);
     extended_convolution_param->add_feature_pad(0);
-    extended_convolution_param->add_feature_pad(0);
-    extended_convolution_param->add_feature_stride(1);
+    //extended_convolution_param->add_feature_stride(1);
     extended_convolution_param->add_feature_stride(5);
     extended_convolution_param->add_feature_stride(5);
     extended_convolution_param->mutable_weight_filler()->set_type("gaussian");
@@ -604,6 +604,7 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestForward_mnist) {
     //setup convolutional layer and forword
     shared_ptr<Layer<Dtype> > layer(
         new ConvolutionLayer<Dtype>(layer_param));
+    data->Reshape(1,1,28,28);
     layer->SetUp(   blob_bottom_vec, blob_top_vec );
 
     const Dtype *extended_weight_data = extended_layer->blobs()[0]->cpu_data();
@@ -612,7 +613,7 @@ TYPED_TEST(ExtendedConvolutionLayerTest, TestForward_mnist) {
     {
         for( int j=0; j<25; j++ )
         {
-            std::cout<< "index:"<< i*25+j << "; extended index:" <<  (i/5*5+j/5)*25+(i%5)*5+j%5 << std::endl;
+            //std::cout<< "index:"<< i*25+j << "; extended index:" <<  (i/5*5+j/5)*25+(i%5)*5+j%5 << std::endl;
             weight_data[i*25+j] = extended_weight_data[ (i/5*5+j/5)*25+(i%5)*5+j%5 ];
         }
     }

@@ -93,6 +93,25 @@ protected:
     shared_ptr<Blob<int> > weight2col_map_;
     shared_ptr<Blob<int> > col2weight_map_;
 
+    void removeRedundantDim( const vector<Blob<Dtype>*>& datas )
+    {
+        for( int i=0; i<datas.size(); i++ )
+        {
+            int num_spatial_axes = datas[0]->num_axes()-1;
+            vector<int> shape;
+            shape.push_back( datas[i]->shape(0) );
+            for( int j=0; j<num_spatial_axes; j++ )
+            {
+                int tmp = datas[i]->shape(j+1);
+                if( tmp != 1 )
+                {
+                    shape.push_back(tmp);
+                }
+            }
+            datas[i]->Reshape(shape);
+        }
+    }
+
     void increase(vector<int>& index, vector<int>& boundary);
     int get_offset( vector<int>& col_index, vector<int>& kernel_index, 
                     vector<int>& data_size, vector<int>& pad, vector<int>&  stride );

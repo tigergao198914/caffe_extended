@@ -42,19 +42,14 @@ layer {
     lr_mult: 1
   }
   extended_convolution_param {
-    kernel_size: 1
     kernel_size: 5
     kernel_size: 5
     stride: 1
     stride: 1
-    stride: 1
-    weight_dim: 1
-    weight_dim: 15
-    weight_dim: 15
+    weight_dim: 23
+    weight_dim: 23
     feature_pad: 0
     feature_pad: 0
-    feature_pad: 0
-    feature_stride: 1
     feature_stride: 2
     feature_stride: 2
     weight_filler {
@@ -72,17 +67,14 @@ layer {
   top: "pool1"
   extended_pooling_param {
     pool: MAX
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
+    kernel_size: 2
+    kernel_size: 2
     kernel_size: 2
     kernel_size: 2
     pad: 0
-    stride: 1
-    stride: 1
-    stride: 1
-    stride: 1
+
+    stride: 2
+    stride: 2
     stride: 2
     stride: 2
   }
@@ -96,27 +88,21 @@ layer {
     lr_mult: 1
   }
   extended_convolution_param {
-    kernel_size: 1
     kernel_size: 5
     kernel_size: 5
-    kernel_size: 1
     kernel_size: 5
     kernel_size: 5
     stride: 1
     
-    weight_dim: 1
-    weight_dim: 19 
-    weight_dim: 19
-    weight_dim: 1
+    weight_dim: 23 
+    weight_dim: 23
     weight_dim: 5 
     weight_dim: 5
 
     feature_pad: 0
 
-    feature_stride: 1
     feature_stride: 2
     feature_stride: 2
-    feature_stride: 1
     feature_stride: 1
     feature_stride: 1
 
@@ -137,64 +123,63 @@ layer {
   top: "pool2"
   extended_pooling_param {
     pool: MAX
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
-    kernel_size: 1
     kernel_size: 2
     kernel_size: 2
-    stride: 1
-    stride: 1
-    stride: 1
-    stride: 1
-    stride: 1
-    stride: 1
-    stride: 1
-    stride: 1
-    stride: 1
-    stride: 1
+    kernel_size: 2
+    kernel_size: 2
+    stride: 2
+    stride: 2
     stride: 2
     stride: 2
   }
 }
 
 layer {
-  name: "ip1"
-  type: "InnerProduct"
+  name: "conv3"
+  type: "ExtendedConvolution"
   bottom: "pool2"
-  top: "ip1"
+  top: "conv3"
   param {
     lr_mult: 1
   }
-  param {
-    lr_mult: 2
-  }
-  inner_product_param {
-    num_output: 500
+  extended_convolution_param {
+
+    kernel_size: 3
+    kernel_size: 3
+    kernel_size: 3
+    kernel_size: 3
+    stride: 1
+    
+    weight_dim: 24 
+    weight_dim: 24
+    weight_dim: 3 
+    weight_dim: 3
+
+    feature_pad: 0
+
+    feature_stride: 3
+    feature_stride: 3
+    feature_stride: 1
+    feature_stride: 1
+
     weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
+      type: "uniform"
+      min: -0.01
+      max: 0.01
     }
   }
 }
+
 layer {
   name: "relu1"
   type: "ReLU"
-  bottom: "ip1"
-  top: "ip1"
+  bottom: "conv3"
+  top: "conv3"
 }
 layer {
   name: "ip2"
   type: "InnerProduct"
-  bottom: "ip1"
+  bottom: "conv3"
   top: "ip2"
   param {
     lr_mult: 1

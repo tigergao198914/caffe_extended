@@ -3,38 +3,13 @@
 #include "caffe/layers/extended_convolution_layer.hpp"
 
 namespace caffe {
-#if 0
-    template <typename Dtype>
-
-    void ExtendedConvolutionLayer<Dtype>::compute_output_shape(){
-        const int* kernel_shape_data = this->kernel_shape_.cpu_data();
-        const int* stride_data = this->stride_.cpu_data();
-        const int* pad_data = this->pad_.cpu_data();
-        const int* dilation_data = this->dilation_.cpu_data();
-        this->output_shape_.clear();
-
-        for( int i=0; i< weight_dim_; i++ )
-        {
-            this->output_shape_.push_back( feature_map_shape_.cpu_data()[i] );
-        }
-
-        sample_col_num_ = 1;
-        for( int i=0; i < this->num_spatial_axes_; ++i)
-        {
-            const int input_dim = this->bottom_sample_shape_.cpu_data()[i];
-            const int kernel_extent = dilation_data[i] * (kernel_shape_data[i]-1) +1;
-            const int output_dim =  (input_dim + 2 * pad_data[i] - kernel_extent) / stride_data[i] + 1;
-            this->output_shape_.push_back( output_dim );
-            sample_col_num_ *= output_dim;
-        }
-    }
-#endif
 
     template <typename Dtype>
     void ExtendedConvolutionLayer<Dtype>::LayerSetUp(
         const vector<Blob<Dtype>*>& bottom,
         const vector<Blob<Dtype>*>& top)
     {
+        removeRedundantDim( bottom );
         ExtendedConvolutionParameter conv_param = this->layer_param_.extended_convolution_param();
         const int num_axes = bottom[0]->num_axes();
         num_spatial_axes_  = num_axes - 1;
@@ -108,8 +83,11 @@ namespace caffe {
         const vector<Blob<Dtype>*>& bottom,
         const vector<Blob<Dtype>*>& top)
     {
+        removeRedundantDim( bottom );
+
         bool input_shape_change = false;
         ExtendedConvolutionParameter conv_param = this->layer_param_.extended_convolution_param();
+        
         for( int i=0; i<num_spatial_axes_; i++ )
         {
             if( input_shape_.size()<=i )
@@ -167,6 +145,8 @@ namespace caffe {
         output_shape_[0] = bottom[0]->shape(0);
         sample_num_ = output_shape_[0];
         top[0]->Reshape(output_shape_);
+
+        removeRedundantDim( top );
     }
 
     template <typename Dtype>
@@ -400,10 +380,10 @@ namespace caffe {
             index_map_data[index+curTime] = i;
             index_map_count_data[data2col_map_data[i]] += 1; 
         }
-        std::cout<<"data2col_map:"<<std::endl;
-        data2col_map->display();
-        std::cout<<"index_map:"<<std::endl;
-        index_map->display();
+        //std::cout<<"data2col_map:"<<std::endl;
+        //data2col_map->display();
+        //std::cout<<"index_map:"<<std::endl;
+        //index_map->display();
         return index_map;
     }
 
