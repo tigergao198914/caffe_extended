@@ -407,6 +407,7 @@ message LayerParameter {
   optional WindowDataParameter window_data_param = 129;
   optional ExtendedConvolutionParameter extended_convolution_param = 200;
   optional ExtendedPoolingParameter extended_pooling_param  = 201;
+  optional ExtendedImageParameter extended_image_param = 202;
 }
 
 // Message that stores parameters used to apply transformation
@@ -701,6 +702,13 @@ message DataParameter {
   // Prefetch queue (Increase if data feeding bandwidth varies, within the
   // limit of device memory for GPU training)
   optional uint32 prefetch = 10 [default = 4];
+}
+
+message ExtendedImageParameter{
+  required uint32 width = 1;
+  required uint32 height = 2;
+  optional bool  color = 3 [default = false];
+  required TransformationParameter transformation_param = 4;
 }
 
 message DropoutParameter {
