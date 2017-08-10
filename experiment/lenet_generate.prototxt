@@ -1,0 +1,198 @@
+name: "LeNet"
+layer {
+  name: "genetate"
+  type: "ExtendedImage"
+ 
+  top: "data"
+  top: "label"
+  include {
+    phase: TRAIN
+  }
+  param {
+    lr_mult: 1
+  }
+
+  extended_image_param {
+      width: 28
+      height:28
+      label_size:1
+      label_size:10
+      transform_param {
+      scale: 0.00390625
+    }
+  }
+ 
+}
+
+layer {
+  name: "conv1"
+  type: "ExtendedConvolution"
+  bottom: "data"
+  top: "conv1"
+  param {
+    lr_mult: 0
+  }
+  extended_convolution_param {
+    kernel_size: 5
+    kernel_size: 5
+    stride: 1
+    stride: 1
+    weight_dim: 23
+    weight_dim: 23
+    feature_pad: 0
+    feature_pad: 0
+    feature_stride: 2
+    feature_stride: 2
+    weight_filler {
+      type: "uniform"
+      min: -0.3
+      max: 0.3
+    }
+  }
+}
+
+layer {
+  name: "pool1"
+  type: "ExtendedPooling"
+  bottom: "conv1"
+  top: "pool1"
+  extended_pooling_param {
+    pool: MAX
+    kernel_size: 2
+    kernel_size: 2
+    kernel_size: 2
+    kernel_size: 2
+    pad: 0
+
+    stride: 2
+    stride: 2
+    stride: 2
+    stride: 2
+  }
+}
+
+layer {
+  name: "conv2"
+  type: "ExtendedConvolution"
+  bottom: "pool1"
+  top: "conv2"
+  param {
+    lr_mult: 0
+  }
+  extended_convolution_param {
+    kernel_size: 5
+    kernel_size: 5
+    kernel_size: 5
+    kernel_size: 5
+    stride: 1
+    
+    weight_dim: 23 
+    weight_dim: 23
+    weight_dim: 5 
+    weight_dim: 5
+
+    feature_pad: 0
+
+    feature_stride: 2
+    feature_stride: 2
+    feature_stride: 1
+    feature_stride: 1
+
+    weight_filler {
+      type: "uniform"
+      min: -0.1
+      max: 0.1
+    }
+  }
+}
+
+layer {
+  name: "pool2"
+  type: "ExtendedPooling"
+  bottom: "conv2"
+  top: "pool2"
+  extended_pooling_param {
+    pool: MAX
+    kernel_size: 2
+    kernel_size: 2
+    kernel_size: 2
+    kernel_size: 2
+    stride: 2
+    stride: 2
+    stride: 2
+    stride: 2
+  }
+}
+
+layer {
+  name: "conv3"
+  type: "ExtendedConvolution"
+  bottom: "pool2"
+  top: "conv3"
+  param {
+    lr_mult: 0
+  }
+  extended_convolution_param {
+
+    kernel_size: 3
+    kernel_size: 3
+    kernel_size: 3
+    kernel_size: 3
+    stride: 1
+    
+    weight_dim: 24 
+    weight_dim: 24
+    weight_dim: 3 
+    weight_dim: 3
+
+    feature_pad: 0
+
+    feature_stride: 3
+    feature_stride: 3
+    feature_stride: 1
+    feature_stride: 1
+
+    weight_filler {
+      type: "uniform"
+      min: -0.01
+      max: 0.01
+    }
+  }
+}
+
+layer {
+  name: "relu1"
+  type: "ReLU"
+  bottom: "conv3"
+  top: "conv3"
+}
+
+layer {
+  name: "ip2"
+  type: "InnerProduct"
+  bottom: "conv3"
+  top: "ip2"
+  param {
+    lr_mult: 0
+  }
+  param {
+    lr_mult: 0
+  }
+  inner_product_param {
+    num_output: 10
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "loss"
+  type: "SoftmaxWithLoss"
+  bottom: "ip2"
+  bottom: "label"
+  top: "loss"
+}
