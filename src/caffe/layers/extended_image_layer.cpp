@@ -2,16 +2,26 @@
 
 namespace caffe {
     template <typename Dtype>
-    void ExtendedImageLayer<Dtype>::LayerSetup(
+    void ExtendedImageLayer<Dtype>::LayerSetUp(
         const vector<Blob<Dtype>*>& bottom,
         const vector<Blob<Dtype>*>& top)
     {
         ExtendedImageParameter extended_image_param = this->layer_param_.extended_image_param();
+        int count = 1;
         width_ = extended_image_param.width();
         height_ = extended_image_param.height();
         bcolor_ = extended_image_param.color();
+        for( int i=0; i<extended_image_param.label_size_size(); i++ )
+        {
+            label_size_.push_back(extended_image_param.label_size(i));
+            count *= label_size_[i];
+        }
+        transform_param_ = extended_image_param.transform_param();
+        label_ = rand()%count;
 
-        transform_param_ = extended_image_param.transformation_param();
+        this->blobs_.resize(1);
+        //initalize and fill the weight
+        this->blobs_[0].reset( &image_ );
     }
 
     template <typename Dtype>
@@ -21,6 +31,7 @@ namespace caffe {
     {
         image_.Reshape(1, width_,height_, bcolor_?3:1);
         top[0]->ReshapeLike(image_);
+        top[1]->Reshape(label_size_);
     }
 
     template <typename Dtype>
@@ -36,6 +47,13 @@ namespace caffe {
 
         //apply transferlation
         data_transformer_->Transform( &image_, top[0] );
+        Dtype* label =  top[1]->mutable_cpu_data();
+        //caffe_memset( (void*)label, 0x0, top[1]->count());
+        for( int i=0; i<top[1]->count(); i++ )
+        {
+            label[i] = (Dtype)0.;
+        }
+        label[label_] = 1;
     }
 
     template <typename Dtype>
