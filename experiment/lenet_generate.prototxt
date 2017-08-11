@@ -5,9 +5,7 @@ layer {
  
   top: "data"
   top: "label"
-  include {
-    phase: TRAIN
-  }
+
   param {
     lr_mult: 1
   }
@@ -192,6 +190,8 @@ layer {
 layer {
   name: "loss"
   type: "SoftmaxWithLoss"
+  propagate_down: 1
+  propagate_down: 0
   bottom: "ip2"
   bottom: "label"
   top: "loss"

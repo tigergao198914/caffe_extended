@@ -20,7 +20,7 @@ int main()
     std::string solver_file = "/home/hosery/git/caffe/experiment/lenet_solver.prototxt";
     SolverParameter solver_param;
     caffe::ReadSolverParamsFromTextFileOrDie(solver_file, &solver_param);
-    Caffe::set_mode(Caffe::GPU);
+    Caffe::set_mode(Caffe::CPU);
     std::shared_ptr<caffe::Solver<float> >
       solver(caffe::SolverRegistry<float>::CreateSolver(solver_param));;
 
@@ -34,6 +34,23 @@ int main()
     solver->Solve();
 
     //get first layer of network and convert to image
+    shared_ptr<Blob<float>> image_blob = solver->net()->layers()[0]->blobs()[0];
+    int target_width = image_blob->width();
+    int target_height = image_blob->height();
+    float* target_data = image_blob->mutable_cpu_data();
+    cv::Mat curImage(target_height, target_width, CV_32FC1, target_data, target_width);
+
+    double min, max;
+    cv::minMaxLoc(curImage, &min, &max);
+    curImage.convertTo(curImage,CV_8U,255.0/(max-min),-255.0*min/(max-min));
+
+    cv::Size size(500,500);
+    cv::resize(curImage,curImage,size);
 
     //display optimized image
+    cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );
+    cv::imshow("Display window",curImage);
+
+    cv::waitKey(0);                                          // Wait for a keystroke in the window
+    return 0;
 }

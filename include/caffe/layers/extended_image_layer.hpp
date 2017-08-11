@@ -44,7 +44,7 @@ private:
    bool   bcolor_;
    int label_;
    std::vector<int> label_size_;
-   Blob<Dtype>  image_;
+   shared_ptr<Blob<Dtype> >  image_;
    TransformationParameter transform_param_;
    shared_ptr<DataTransformer<Dtype> > data_transformer_;
 };
